@@ -617,12 +617,6 @@ export default function HojasDePuntos() {
           </div>
         </div>
       </div>
-
-      <div style={{ maxWidth: 680, margin: '0 auto 48px', padding: '0 16px', color: 'oklch(0.4 0.01 250)', fontSize: 13, lineHeight: 1.6 }}>
-        <p style={{ margin: '0 0 6px' }}>
-          <strong>Estándares de hojas punteadas:</strong> espaciado típico 5&nbsp;mm (algunos cuadernos usan 4&nbsp;mm o 7&nbsp;mm), tamaño de punto 0.3–0.4&nbsp;mm, margen simétrico 12–20&nbsp;mm en carta/A4. Ajusta cualquiera de estos valores desde el panel y luego imprime o descarga el PDF.
-        </p>
-      </div>
     </>
   );
 }
