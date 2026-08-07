@@ -750,11 +750,11 @@ export default function HojasDePuntos() {
                       <IconImage size={16} color="#fff" />
                     </span>
                   </div>
-                  {logo && (
+                  {showLogo && (
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); set('logo', null); }}
-                      title="Quitar logo"
+                      onClick={(e) => { e.stopPropagation(); set('showLogo', false); }}
+                      title="Quitar logo de la hoja"
                       aria-label="Quitar logo"
                       className="logo-remove-badge"
                       style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: '#b03535', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
