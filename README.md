@@ -1,43 +1,51 @@
-# Astro Starter Kit: Minimal
+# Hojas de Puntos Personalizables
+
+Generador de hojas de cuaderno imprimibles (puntos, líneas, cuadrícula, isométrico, caligrafía, pentagrama) con vista previa en vivo y exportación a PDF vectorial. Pensado para personalizar tamaño de papel, márgenes, patrón, encabezado (nombre/carnet) y logo, y descargar hojas listas para imprimir.
+
+## Qué hace
+
+- **Patrones de página**: puntos, líneas, cuadrícula, isométrico, caligrafía (renglón + guía de altura-x) y pentagrama, con espaciado, grosor, color y opacidad ajustables.
+- **Papel**: Carta, A4, Media carta, A5 o Moleskine, con márgenes superior/inferior/lateral independientes.
+- **Encabezado y logo**: nombre + carnet en la esquina inferior, y un logo (por defecto el sello institucional) con tamaño, posición y opacidad configurables.
+- **Perfiles**: varios perfiles (nombre, carnet, logo propio) guardados en `localStorage`, para reutilizar el generador entre distintas personas sin volver a capturar datos.
+- **Exportación PDF**: el botón "Descargar PDF" genera un PDF **vectorial** (puntos como círculos vectoriales, líneas vectoriales, texto real, logo embebido) al tamaño físico exacto del papel elegido, con el número de hojas indicado — no es una captura de pantalla.
+- Todos los ajustes se aplican en vivo sobre la vista previa y persisten automáticamente en el navegador.
+
+## Stack
+
+- [Astro](https://astro.build) como framework base (salida estática).
+- [React](https://react.dev) para el componente interactivo (`src/components/HojasDePuntos.tsx`), montado como isla con `client:load`.
+- [jsPDF](https://github.com/parallax/jsPDF) para la generación de PDF vectorial, cargado de forma diferida (`import()` dinámico) solo cuando se pulsa "Descargar PDF", para no penalizar la carga inicial.
+- Sin backend: todo corre en el navegador, con `localStorage` como única persistencia.
+
+## Desarrollo
 
 ```sh
-npm create astro@latest -- --template minimal
+npm install
+npm run dev       # http://localhost:4321
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+| Comando           | Acción                                       |
+| :----------------- | :-------------------------------------------- |
+| `npm install`       | Instala dependencias                          |
+| `npm run dev`       | Servidor de desarrollo en `localhost:4321`    |
+| `npm run build`     | Build de producción a `./dist/`               |
+| `npm run preview`   | Sirve el build de producción localmente       |
 
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
+## Estructura
 
 ```text
 /
 ├── public/
+│   └── logo-mariano.webp      # logo por defecto (sello institucional)
 ├── src/
+│   ├── components/
+│   │   └── HojasDePuntos.tsx  # toda la lógica: estado, patrones, export PDF
 │   └── pages/
-│       └── index.astro
+│       └── index.astro        # layout + estilos globales, monta el componente
 └── package.json
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Origen
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+La interfaz y el comportamiento fueron diseñados como prototipo en [Claude Design](https://claude.ai/design) y portados fielmente a este stack (Astro + React + jsPDF).

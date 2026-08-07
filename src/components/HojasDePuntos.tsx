@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { jsPDF } from 'jspdf';
+// jsPDF (and its transitive html2canvas/dompurify deps) is ~400KB and is only
+// ever needed once the user clicks "Descargar PDF" — loading it eagerly would
+// bloat the initial bundle everyone pays for, so it's dynamically imported
+// inside downloadPdf() instead, putting it in its own on-demand chunk.
 
 type PaperKey = 'letter' | 'a4' | 'halfLetter' | 'a5' | 'moleskine';
 type PatternKey = 'dots' | 'lines' | 'grid' | 'isometric' | 'calligraphy' | 'music';
@@ -65,7 +68,8 @@ const DEFAULT_PROFILES: Profile[] = [
 
 const SETTINGS_KEY = 'hoja-de-puntos-ajustes';
 const PROFILES_KEY = 'hoja-de-puntos-perfiles';
-const DEFAULT_LOGO = '/logo-mariano.png';
+const DEFAULT_LOGO = '/logo-mariano.webp';
+const DEFAULT_LOGO_DIMS = { width: 678, height: 669 };
 
 function loadSettings(): Settings {
   try {
@@ -201,6 +205,7 @@ export default function HojasDePuntos() {
   const preset = PAPER_PRESETS[settings.paperPreset] || PAPER_PRESETS.letter;
 
   async function downloadPdf() {
+    const { jsPDF } = await import('jspdf');
     const s = settings;
     const pw = preset.w, ph = preset.h;
     const doc = new jsPDF({ unit: 'mm', format: [pw, ph] });
@@ -407,8 +412,6 @@ export default function HojasDePuntos() {
     printColorAdjust: 'exact',
   } as React.CSSProperties;
 
-  if (!ready) return null;
-
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24, padding: '32px 16px', flexWrap: 'wrap' }}>
@@ -419,7 +422,20 @@ export default function HojasDePuntos() {
               <span style={headerNameStyle}>{activeProfile?.name}</span>
               <span style={headerIdStyle}>{activeProfile?.cardId}</span>
             </div>
-            {logoSrc && <img src={logoSrc} alt="Logo" style={logoStyle} />}
+            {logoSrc && (
+              <img
+                src={logoSrc}
+                alt="Logo"
+                style={logoStyle}
+                // Intrinsic dimensions pin the aspect ratio for the bundled default
+                // logo (avoids layout shift); a custom uploaded logo already decodes
+                // instantly from its in-memory data URL, so it's left unset there
+                // rather than risk stretching it to the default's ratio.
+                {...(activeProfile?.logo ? {} : { width: DEFAULT_LOGO_DIMS.width, height: DEFAULT_LOGO_DIMS.height })}
+                decoding="async"
+                fetchPriority="high"
+              />
+            )}
           </section>
         </div>
 
