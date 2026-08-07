@@ -335,9 +335,15 @@ export default function HojasDePuntos() {
   const set = <K extends keyof Settings>(key: K, val: Settings[K]) =>
     setSettings((s) => ({ ...s, [key]: val }));
 
+  // Picking a logo (preset or custom) should turn it on — otherwise choosing
+  // one while "Mostrar" is off silently does nothing visible, which reads as
+  // broken rather than as two independent settings.
+  const chooseLogo = (src: string | null) =>
+    setSettings((s) => ({ ...s, logo: src, showLogo: true }));
+
   const handleLogoFile = (file: File) => {
     const reader = new FileReader();
-    reader.onload = () => set('logo', reader.result as string);
+    reader.onload = () => chooseLogo(reader.result as string);
     reader.readAsDataURL(file);
   };
   const setLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -774,7 +780,7 @@ export default function HojasDePuntos() {
                           type="button"
                           title={u.label}
                           aria-label={u.label}
-                          onClick={() => set('logo', u.src)}
+                          onClick={() => chooseLogo(u.src)}
                           style={{
                             width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', padding: 0, cursor: 'pointer', background: '#fff',
                             border: selected ? `2px solid ${ACCENT}` : '1px solid #e2e4e9',
