@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 // jsPDF (and its transitive html2canvas/dompurify deps) is ~400KB and is only
 // ever needed once the user clicks "Descargar PDF" — loading it eagerly would
 // bloat the initial bundle everyone pays for, so it's dynamically imported
@@ -7,14 +7,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 type PaperKey = 'letter' | 'a4' | 'halfLetter' | 'a5' | 'moleskine';
 type PatternKey = 'dots' | 'lines' | 'grid' | 'isometric' | 'calligraphy' | 'music';
 
-interface Profile {
-  id: string;
+interface Settings {
   name: string;
   cardId: string;
   logo: string | null;
-}
-
-interface Settings {
   paperPreset: PaperKey;
   patternType: PatternKey;
   marginTopMm: number;
@@ -43,6 +39,9 @@ const PAPER_PRESETS: Record<PaperKey, { label: string; w: number; h: number }> =
 };
 
 const DEFAULT_SETTINGS: Settings = {
+  name: 'Josue Manuel Cruz Boror',
+  cardId: '1190-26-558',
+  logo: null,
   paperPreset: 'letter',
   patternType: 'dots',
   marginTopMm: 15,
@@ -62,33 +61,39 @@ const DEFAULT_SETTINGS: Settings = {
   pageCount: 1,
 };
 
-const DEFAULT_PROFILES: Profile[] = [
-  { id: 'p-default', name: 'Josue Manuel Cruz Boror', cardId: '1190-26-558', logo: null },
-];
-
 const SETTINGS_KEY = 'hoja-de-puntos-ajustes';
-const PROFILES_KEY = 'hoja-de-puntos-perfiles';
+// Older versions of this app kept a whole multi-profile system (name/cardId/
+// logo per saved profile); it turned out nobody needed more than one, and it
+// ate a column of panel space for a switcher/add/delete UI nobody used. This
+// reads whichever profile was active there once, on the way out, so an
+// existing visitor's name/logo aren't reset to the defaults.
+const LEGACY_PROFILES_KEY = 'hoja-de-puntos-perfiles';
 const DEFAULT_LOGO = '/logo-mariano.webp';
 const DEFAULT_LOGO_DIMS = { width: 678, height: 669 };
 
 function loadSettings(): Settings {
+  let merged: Partial<Settings> = {};
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-}
-
-function loadProfiles(): { profiles: Profile[]; activeProfileId: string } {
-  try {
-    const raw = localStorage.getItem(PROFILES_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (parsed && Array.isArray(parsed.profiles) && parsed.profiles.length) return parsed;
+    if (raw) merged = JSON.parse(raw);
   } catch {
     /* ignore */
   }
-  return { profiles: DEFAULT_PROFILES, activeProfileId: 'p-default' };
+
+  if (merged.name === undefined) {
+    try {
+      const raw = localStorage.getItem(LEGACY_PROFILES_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      const active = parsed?.profiles?.find((p: any) => p.id === parsed.activeProfileId) ?? parsed?.profiles?.[0];
+      if (active) {
+        merged = { ...merged, name: active.name, cardId: active.cardId, logo: active.logo ?? null };
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return { ...DEFAULT_SETTINGS, ...merged };
 }
 
 function hexToRgba(hex: string, alpha: number) {
@@ -150,17 +155,12 @@ const sectionHeaderStyle: React.CSSProperties = { fontSize: 11, fontWeight: 600,
 export default function HojasDePuntos() {
   const [ready, setReady] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [profiles, setProfiles] = useState<Profile[]>(DEFAULT_PROFILES);
-  const [activeProfileId, setActiveProfileIdState] = useState('p-default');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewOuterRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
 
   useEffect(() => {
     setSettings(loadSettings());
-    const p = loadProfiles();
-    setProfiles(p.profiles);
-    setActiveProfileIdState(p.activeProfileId);
     setReady(true);
   }, []);
 
@@ -169,41 +169,15 @@ export default function HojasDePuntos() {
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* ignore */ }
   }, [ready, settings]);
 
-  useEffect(() => {
-    if (!ready) return;
-    try { localStorage.setItem(PROFILES_KEY, JSON.stringify({ profiles, activeProfileId })); } catch { /* ignore */ }
-  }, [ready, profiles, activeProfileId]);
-
   const set = <K extends keyof Settings>(key: K, val: Settings[K]) =>
     setSettings((s) => ({ ...s, [key]: val }));
 
-  const activeProfile = useMemo(
-    () => profiles.find((p) => p.id === activeProfileId) || profiles[0],
-    [profiles, activeProfileId]
-  );
-
-  const updateActiveProfile = (field: keyof Profile, value: string | null) =>
-    setProfiles((ps) => ps.map((p) => (p.id === activeProfileId ? { ...p, [field]: value } : p)));
-
-  const setProfileLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const setLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => updateActiveProfile('logo', reader.result as string);
+    reader.onload = () => set('logo', reader.result as string);
     reader.readAsDataURL(file);
-  };
-
-  const addProfile = () => {
-    const id = 'p-' + Date.now();
-    setProfiles((ps) => [...ps, { id, name: 'Nuevo perfil', cardId: '', logo: null }]);
-    setActiveProfileIdState(id);
-  };
-
-  const deleteProfile = () => {
-    if (profiles.length <= 1) return;
-    const remaining = profiles.filter((p) => p.id !== activeProfileId);
-    setProfiles(remaining);
-    setActiveProfileIdState(remaining[0].id);
   };
 
   const preset = PAPER_PRESETS[settings.paperPreset] || PAPER_PRESETS.letter;
@@ -246,7 +220,6 @@ export default function HojasDePuntos() {
     const s = settings;
     const pw = preset.w, ph = preset.h;
     const doc = new jsPDF({ unit: 'mm', format: [pw, ph] });
-    const profile = activeProfile;
 
     const drawPatternPage = () => {
       doc.setDrawColor(s.dotColor);
@@ -301,15 +274,15 @@ export default function HojasDePuntos() {
         doc.setTextColor('#9a9ea8');
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(s.headerFontSize);
-        doc.text(profile.name || '', s.marginSideMm, bottomY);
-        const nameWidth = doc.getTextWidth(profile.name || '');
+        doc.text(s.name || '', s.marginSideMm, bottomY);
+        const nameWidth = doc.getTextWidth(s.name || '');
         doc.setTextColor('#b7bac2');
         doc.setFontSize(s.headerFontSize * 0.85);
-        doc.text(profile.cardId || '', s.marginSideMm + nameWidth + 2, bottomY);
+        doc.text(s.cardId || '', s.marginSideMm + nameWidth + 2, bottomY);
       }
       if (s.showLogo) {
         try {
-          const src = profile.logo || DEFAULT_LOGO;
+          const src = s.logo || DEFAULT_LOGO;
           const imgData = await loadImageDataUrl(src);
           const props = doc.getImageProperties(imgData);
           const w = s.logoWidthMm;
@@ -338,11 +311,11 @@ export default function HojasDePuntos() {
   }
 
   // ---- Live preview background pattern (matches print output in mm units) ----
-  const { paperPreset, marginTopMm, marginBottomMm, marginSideMm, dotSpacingMm: spacing, dotSizeMm: dotSize,
+  const { name, cardId, logo, paperPreset, marginTopMm, marginBottomMm, marginSideMm, dotSpacingMm: spacing, dotSizeMm: dotSize,
     dotColor, dotOpacity, showHeader, headerFontSize, headerOffsetTopMm, showLogo, logoWidthMm,
     logoOffsetBottomMm, logoOpacity, patternType, pageCount } = settings;
 
-  const logoSrc = activeProfile?.logo || DEFAULT_LOGO;
+  const logoSrc = logo || DEFAULT_LOGO;
 
   const svgPxPerMm = 10;
   const tile = spacing * svgPxPerMm;
@@ -472,8 +445,8 @@ export default function HojasDePuntos() {
           <section className="page" style={pageStyle}>
             {cornerTicks.map((style, i) => <div key={i} style={style} />)}
             <div style={headerWrapStyle}>
-              <span style={headerNameStyle}>{activeProfile?.name}</span>
-              <span style={headerIdStyle}>{activeProfile?.cardId}</span>
+              <span style={headerNameStyle}>{name}</span>
+              <span style={headerIdStyle}>{cardId}</span>
             </div>
             {logoSrc && (
               <img
@@ -484,7 +457,7 @@ export default function HojasDePuntos() {
                 // logo (avoids layout shift); a custom uploaded logo already decodes
                 // instantly from its in-memory data URL, so it's left unset there
                 // rather than risk stretching it to the default's ratio.
-                {...(activeProfile?.logo ? {} : { width: DEFAULT_LOGO_DIMS.width, height: DEFAULT_LOGO_DIMS.height })}
+                {...(logo ? {} : { width: DEFAULT_LOGO_DIMS.width, height: DEFAULT_LOGO_DIMS.height })}
                 decoding="async"
                 fetchPriority="high"
               />
@@ -514,27 +487,18 @@ export default function HojasDePuntos() {
           <div className="settings-grid">
 
             <div>
-              <div style={{ ...sectionHeaderStyle, marginTop: 0 }}>Perfil</div>
-              <label style={rowLabelStyle}>Perfil
-                <select value={activeProfileId} onChange={(e) => setActiveProfileIdState(e.target.value)} style={{ ...selectStyle, maxWidth: 150 }}>
-                  {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </label>
+              <div style={{ ...sectionHeaderStyle, marginTop: 0 }}>Identidad</div>
               <label style={labelStyle}>Nombre
-                <input type="text" value={activeProfile?.name ?? ''} onChange={(e) => updateActiveProfile('name', e.target.value)} style={inputStyle} />
+                <input type="text" value={name} onChange={(e) => set('name', e.target.value)} style={inputStyle} />
               </label>
               <label style={labelStyle}>Carnet / código
-                <input type="text" value={activeProfile?.cardId ?? ''} onChange={(e) => updateActiveProfile('cardId', e.target.value)} style={inputStyle} />
+                <input type="text" value={cardId} onChange={(e) => set('cardId', e.target.value)} style={inputStyle} />
               </label>
               <label style={{ display: 'block', fontSize: 12, color: '#333', marginBottom: 8 }}>Logo
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={setProfileLogo} style={{ display: 'block', width: '100%', fontSize: 11, marginTop: 3 }} />
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={setLogoFile} style={{ display: 'block', width: '100%', fontSize: 11, marginTop: 3 }} />
               </label>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                <button onClick={() => updateActiveProfile('logo', null)} style={{ flex: 1, padding: '6px 8px', border: '1px solid #e2e4e9', borderRadius: 6, background: '#fff', color: '#555', fontSize: 11, cursor: 'pointer' }}>Quitar logo</button>
-              </div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                <button onClick={addProfile} style={{ flex: 1, padding: '6px 8px', border: '1px solid #e2e4e9', borderRadius: 6, background: '#fff', color: '#333', fontSize: 11, cursor: 'pointer' }}>+ Nuevo</button>
-                <button onClick={deleteProfile} style={{ flex: 1, padding: '6px 8px', border: '1px solid #e2e4e9', borderRadius: 6, background: '#fff', color: '#b03535', fontSize: 11, cursor: 'pointer' }}>Eliminar</button>
+                <button onClick={() => set('logo', null)} style={{ flex: 1, padding: '6px 8px', border: '1px solid #e2e4e9', borderRadius: 6, background: '#fff', color: '#555', fontSize: 11, cursor: 'pointer' }}>Quitar logo</button>
               </div>
 
               <div style={sectionHeaderStyle}>Encabezado</div>
@@ -620,7 +584,7 @@ export default function HojasDePuntos() {
           <div style={{ padding: '12px 20px 20px', borderTop: '1px solid #eee' }}>
             <button onClick={downloadPdf} style={{ width: '100%', padding: '10px 12px', border: 'none', borderRadius: 8, background: '#1f2430', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.2px' }}>Descargar PDF</button>
             <div style={{ fontSize: 11, color: '#9a9ea8', marginTop: 6, lineHeight: 1.4 }}>
-              PDF vectorial de {pageCount} hoja(s) — máxima nitidez al imprimir. Tus ajustes y perfiles se guardan automáticamente en este navegador.
+              PDF vectorial de {pageCount} hoja(s) — máxima nitidez al imprimir. Tus ajustes se guardan automáticamente en este navegador.
             </div>
           </div>
         </div>
