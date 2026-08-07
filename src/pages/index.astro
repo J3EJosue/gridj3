@@ -67,6 +67,10 @@ import HojasDePuntos from '../components/HojasDePuntos';
 				bottom: 10px;
 				right: 12px;
 				z-index: 5;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				white-space: nowrap;
 				padding: 4px 10px;
 				border-radius: 20px;
 				background: rgba(255, 255, 255, 0.75);
@@ -80,8 +84,8 @@ import HojasDePuntos from '../components/HojasDePuntos';
 			@media (max-width: 680px) {
 				.credit-footer {
 					position: static;
-					display: block;
-					text-align: center;
+					flex-direction: column;
+					gap: 6px;
 					margin: 0 auto;
 					padding: 4px 16px 20px;
 					background: none;
