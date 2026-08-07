@@ -55,6 +55,39 @@ import HojasDePuntos from '../components/HojasDePuntos';
 					flex-wrap: nowrap;
 				}
 			}
+			/* Fixed so it never adds to the page's flow height — the sheet's
+			   shrink-to-fit math (JS, keyed on viewport height) assumes nothing
+			   else grows the page, and an in-flow footer broke that, causing a
+			   scrollbar. Below 680px the panel stacks under the sheet and
+			   already scrolls on its own, so a fixed corner pill there would
+			   sit on top of scrolled-to controls (e.g. the size stepper) —
+			   it drops back into normal flow, centered, at the very bottom. */
+			.credit-footer {
+				position: fixed;
+				bottom: 10px;
+				right: 12px;
+				z-index: 5;
+				padding: 4px 10px;
+				border-radius: 20px;
+				background: rgba(255, 255, 255, 0.75);
+				backdrop-filter: blur(4px);
+				font-size: 10.5px;
+				color: #9a9ea8;
+			}
+			.credit-footer a {
+				color: #8a8e98;
+			}
+			@media (max-width: 680px) {
+				.credit-footer {
+					position: static;
+					display: block;
+					text-align: center;
+					margin: 0 auto;
+					padding: 4px 16px 20px;
+					background: none;
+					backdrop-filter: none;
+				}
+			}
 			.settings-panel input[type="range"] {
 				accent-color: #2f6fed;
 			}
