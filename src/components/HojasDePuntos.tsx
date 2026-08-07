@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 type PaperKey = 'letter' | 'a4' | 'halfLetter' | 'a5' | 'moleskine';
 type PatternKey = 'dots' | 'lines' | 'grid' | 'isometric' | 'calligraphy' | 'music';
+type HeaderPosition = 'bottom' | 'top';
 
 interface Settings {
   name: string;
@@ -22,7 +23,7 @@ interface Settings {
   dotOpacity: number;
   showHeader: boolean;
   headerFontSize: number;
-  headerOffsetTopMm: number;
+  headerPosition: HeaderPosition;
   showLogo: boolean;
   logoWidthMm: number;
   logoOffsetBottomMm: number;
@@ -64,7 +65,7 @@ const DEFAULT_SETTINGS: Settings = {
   dotOpacity: 0.65,
   showHeader: true,
   headerFontSize: 11,
-  headerOffsetTopMm: 0,
+  headerPosition: 'bottom',
   showLogo: true,
   logoWidthMm: 28,
   logoOffsetBottomMm: 10,
@@ -225,6 +226,36 @@ const IconGrid = ({ size = 12, color = 'currentColor' }: IconProps) => (
 const IconDownload = ({ size = 14, color = 'currentColor' }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
 );
+const IconChevronUp = ({ size = 9, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
+);
+const IconChevronDown = ({ size = 9, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+);
+const IconArrowUp = ({ size = 14, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" /></svg>
+);
+const IconArrowDown = ({ size = 14, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" /></svg>
+);
+
+function Stepper({ value, min, max, step, suffix, onChange }: { value: number; min: number; max: number; step: number; suffix?: string; onChange: (v: number) => void }) {
+  const clamp = (v: number) => Math.min(max, Math.max(min, Math.round(v / step) * step));
+  const stepBtnStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 15, background: 'none', border: 'none', padding: 0, color: '#8a8f9c' };
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'stretch', border: '1px solid #e2e4e9', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ padding: '4px 8px', fontSize: 12, color: '#333', minWidth: 30, textAlign: 'center', display: 'flex', alignItems: 'center' }}>{value}{suffix}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #e2e4e9' }}>
+        <button type="button" aria-label="Aumentar" onClick={() => onChange(clamp(value + step))} disabled={value >= max} style={{ ...stepBtnStyle, borderBottom: '1px solid #e2e4e9', cursor: value >= max ? 'default' : 'pointer', opacity: value >= max ? 0.35 : 1 }}>
+          <IconChevronUp />
+        </button>
+        <button type="button" aria-label="Disminuir" onClick={() => onChange(clamp(value - step))} disabled={value <= min} style={{ ...stepBtnStyle, cursor: value <= min ? 'default' : 'pointer', opacity: value <= min ? 0.35 : 1 }}>
+          <IconChevronDown />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -359,15 +390,17 @@ export default function HojasDePuntos() {
 
     const drawHeaderAndLogo = async () => {
       if (s.showHeader) {
-        const bottomY = ph - Math.max(s.marginBottomMm + s.headerOffsetTopMm, 4) / 2;
+        const headerY = s.headerPosition === 'top'
+          ? Math.max(s.marginTopMm, 4) / 2
+          : ph - Math.max(s.marginBottomMm, 4) / 2;
         doc.setTextColor('#9a9ea8');
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(s.headerFontSize);
-        doc.text(s.name || '', s.marginSideMm, bottomY);
+        doc.text(s.name || '', s.marginSideMm, headerY);
         const nameWidth = doc.getTextWidth(s.name || '');
         doc.setTextColor('#b7bac2');
         doc.setFontSize(s.headerFontSize * 0.85);
-        doc.text(s.cardId || '', s.marginSideMm + nameWidth + 2, bottomY);
+        doc.text(s.cardId || '', s.marginSideMm + nameWidth + 2, headerY);
       }
       if (s.showLogo) {
         try {
@@ -394,7 +427,7 @@ export default function HojasDePuntos() {
 
   // ---- Live preview background pattern (matches print output in mm units) ----
   const { name, cardId, logo, paperPreset, marginTopMm, marginBottomMm, marginSideMm, dotSpacingMm: spacing, dotSizeMm: dotSize,
-    dotColor, dotOpacity, showHeader, headerFontSize, headerOffsetTopMm, showLogo, logoWidthMm,
+    dotColor, dotOpacity, showHeader, headerFontSize, headerPosition, showLogo, logoWidthMm,
     logoOffsetBottomMm, logoOpacity, patternType } = settings;
 
   const logoSrc = logo || DEFAULT_LOGO;
@@ -429,7 +462,9 @@ export default function HojasDePuntos() {
     alignItems: 'baseline',
     gap: 6,
     position: 'absolute',
-    bottom: `${Math.max(marginBottomMm + headerOffsetTopMm, 4) / 2}mm`,
+    ...(headerPosition === 'top'
+      ? { top: `${Math.max(marginTopMm, 4) / 2}mm` }
+      : { bottom: `${Math.max(marginBottomMm, 4) / 2}mm` }),
     left: `${marginSideMm}mm`,
     fontFamily: '"Helvetica Neue", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif',
   };
@@ -567,12 +602,41 @@ export default function HojasDePuntos() {
               <label style={rowLabelStyle}>Mostrar
                 <Toggle checked={showHeader} onChange={(v) => set('showHeader', v)} />
               </label>
-              <label style={labelStyle}>Tamaño de letra &mdash; {headerFontSize} pt
-                <input type="range" min={8} max={16} step={0.5} value={headerFontSize} onChange={(e) => set('headerFontSize', parseFloat(e.target.value))} style={{ width: '100%' }} />
-              </label>
-              <label style={labelStyle}>Posición vertical &mdash; {headerOffsetTopMm} mm
-                <input type="range" min={-10} max={20} step={1} value={headerOffsetTopMm} onChange={(e) => set('headerOffsetTopMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
-              </label>
+              <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Tamaño de letra
+                <Stepper value={headerFontSize} min={8} max={16} step={0.5} suffix=" pt" onChange={(v) => set('headerFontSize', v)} />
+              </div>
+              <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Posición
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    type="button"
+                    title="Abajo"
+                    aria-label="Abajo"
+                    onClick={() => set('headerPosition', 'bottom')}
+                    style={{
+                      width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer',
+                      border: headerPosition === 'bottom' ? `2px solid ${ACCENT}` : '1px solid #e2e4e9',
+                      boxShadow: headerPosition === 'bottom' ? `0 0 0 3px ${ACCENT}22` : 'none',
+                      background: '#fff', color: headerPosition === 'bottom' ? ACCENT : '#8a8f9c',
+                    }}
+                  >
+                    <IconArrowDown />
+                  </button>
+                  <button
+                    type="button"
+                    title="Arriba"
+                    aria-label="Arriba"
+                    onClick={() => set('headerPosition', 'top')}
+                    style={{
+                      width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer',
+                      border: headerPosition === 'top' ? `2px solid ${ACCENT}` : '1px solid #e2e4e9',
+                      boxShadow: headerPosition === 'top' ? `0 0 0 3px ${ACCENT}22` : 'none',
+                      background: '#fff', color: headerPosition === 'top' ? ACCENT : '#8a8f9c',
+                    }}
+                  >
+                    <IconArrowUp />
+                  </button>
+                </div>
+              </div>
 
               <div style={sectionHeaderStyle}><IconImage color="#8a8f9c" />Posición del logo</div>
               <label style={rowLabelStyle}>Mostrar
