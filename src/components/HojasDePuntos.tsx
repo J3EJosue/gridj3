@@ -238,6 +238,12 @@ const IconArrowUp = ({ size = 14, color = 'currentColor' }: IconProps) => (
 const IconArrowDown = ({ size = 14, color = 'currentColor' }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" /></svg>
 );
+const IconClose = ({ size = 10, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+);
+const IconSpinner = ({ size = 14, color = 'currentColor', className }: IconProps & { className?: string }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round"><path d="M21 12a9 9 0 1 1-9-9" /></svg>
+);
 
 function SectionHeader({ icon, right, children }: { icon: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -286,7 +292,12 @@ export default function HojasDePuntos() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewOuterRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [logoDropActive, setLogoDropActive] = useState(false);
+  const logoDragRef = useRef<{ startY: number; startOffset: number } | null>(null);
+  const headerDraggingRef = useRef(false);
 
   useEffect(() => {
     setSettings(loadSettings());
@@ -301,12 +312,14 @@ export default function HojasDePuntos() {
   const set = <K extends keyof Settings>(key: K, val: Settings[K]) =>
     setSettings((s) => ({ ...s, [key]: val }));
 
-  const setLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
+  const handleLogoFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = () => set('logo', reader.result as string);
     reader.readAsDataURL(file);
+  };
+  const setLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) handleLogoFile(file);
   };
 
   const preset = PAPER_PRESETS[settings.paperPreset] || PAPER_PRESETS.letter;
@@ -345,6 +358,8 @@ export default function HojasDePuntos() {
   }, [pageWidthPx, pageHeightPx]);
 
   async function downloadPdf() {
+    setIsGeneratingPdf(true);
+    try {
     const { jsPDF } = await import('jspdf');
     const s = settings;
     const pw = preset.w, ph = preset.h;
@@ -432,6 +447,9 @@ export default function HojasDePuntos() {
     await drawHeaderAndLogo();
 
     doc.save('hoja-de-puntos.pdf');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   }
 
   // ---- Live preview background pattern (matches print output in mm units) ----
@@ -476,6 +494,49 @@ export default function HojasDePuntos() {
       : { bottom: `${Math.max(marginBottomMm, 4) / 2}mm` }),
     left: `${marginSideMm}mm`,
     fontFamily: '"Helvetica Neue", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif',
+    cursor: 'grab',
+    touchAction: 'none',
+  };
+
+  // Dragging the header snaps it between the two safe presets (top/bottom
+  // margin band) based on which half of the page the pointer is over —
+  // continuous free placement was deliberately removed earlier so the
+  // header always stays inside a margin band; dragging just picks between
+  // the two spots interactively instead of via the arrow buttons.
+  const handleHeaderPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    headerDraggingRef.current = true;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const handleHeaderPointerMove = (e: React.PointerEvent) => {
+    if (!headerDraggingRef.current || !pageRef.current) return;
+    const rect = pageRef.current.getBoundingClientRect();
+    const relYmm = (e.clientY - rect.top) / previewScale / MM_TO_PX;
+    const next: HeaderPosition = relYmm < preset.h / 2 ? 'top' : 'bottom';
+    if (next !== headerPosition) set('headerPosition', next);
+  };
+  const handleHeaderPointerUp = () => {
+    headerDraggingRef.current = false;
+  };
+
+  // Dragging the logo maps directly onto the same -20..60mm range as its
+  // "Posición desde abajo" stepper — moving the pointer up increases the
+  // offset (further from the bottom edge), scaled by previewScale since
+  // the sheet itself is rendered smaller than its true physical size.
+  const handleLogoPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    logoDragRef.current = { startY: e.clientY, startOffset: logoOffsetBottomMm };
+  };
+  const handleLogoPointerMove = (e: React.PointerEvent) => {
+    if (!logoDragRef.current) return;
+    const { startY, startOffset } = logoDragRef.current;
+    const deltaMm = -(e.clientY - startY) / previewScale / MM_TO_PX;
+    const next = Math.min(60, Math.max(-20, Math.round(startOffset + deltaMm)));
+    if (next !== logoOffsetBottomMm) set('logoOffsetBottomMm', next);
+  };
+  const handleLogoPointerUp = () => {
+    logoDragRef.current = null;
   };
   const headerNameStyle: React.CSSProperties = { fontSize: `${headerFontSize}pt`, fontWeight: 500, color: '#9a9ea8', letterSpacing: '0.2px', whiteSpace: 'nowrap' };
   const headerIdStyle: React.CSSProperties = { fontSize: `${headerFontSize * 0.85}pt`, fontWeight: 400, color: '#b7bac2', letterSpacing: '0.6px', whiteSpace: 'nowrap' };
@@ -510,6 +571,8 @@ export default function HojasDePuntos() {
     opacity: logoOpacity,
     WebkitPrintColorAdjust: 'exact',
     printColorAdjust: 'exact',
+    cursor: 'grab',
+    touchAction: 'none',
   } as React.CSSProperties;
 
   return (
@@ -528,9 +591,15 @@ export default function HojasDePuntos() {
             margin: '0 auto',
           }}
         >
-          <section className="page" style={pageStyle}>
+          <section className="page" style={pageStyle} ref={pageRef}>
             {cornerTicks.map((style, i) => <div key={i} style={style} />)}
-            <div style={headerWrapStyle}>
+            <div
+              style={headerWrapStyle}
+              onPointerDown={handleHeaderPointerDown}
+              onPointerMove={handleHeaderPointerMove}
+              onPointerUp={handleHeaderPointerUp}
+              onPointerCancel={handleHeaderPointerUp}
+            >
               <span style={headerNameStyle}>{name}</span>
               <span style={headerIdStyle}>{cardId}</span>
             </div>
@@ -546,6 +615,11 @@ export default function HojasDePuntos() {
                 {...(logo ? {} : { width: DEFAULT_LOGO_DIMS.width, height: DEFAULT_LOGO_DIMS.height })}
                 decoding="async"
                 fetchPriority="high"
+                draggable={false}
+                onPointerDown={handleLogoPointerDown}
+                onPointerMove={handleLogoPointerMove}
+                onPointerUp={handleLogoPointerUp}
+                onPointerCancel={handleLogoPointerUp}
               />
             )}
           </section>
@@ -578,21 +652,51 @@ export default function HojasDePuntos() {
             <div>
               <div style={{ ...sectionHeaderStyle, marginTop: 0 }}><IconIdentity color="#8a8f9c" />Identidad</div>
 
-              {/* Logo avatar: click or drop to change, hover reveals the change affordance */}
+              {/* Logo avatar: click or drop an image to change it; hovering reveals
+                  the change affordance and, when a custom logo is set, a quick-remove X */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => fileInputRef.current?.click()}
-                  title="Cambiar logo"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
+                  onDragEnter={(e) => { e.preventDefault(); setLogoDropActive(true); }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragLeave={() => setLogoDropActive(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setLogoDropActive(false);
+                    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                    if (file) handleLogoFile(file);
+                  }}
+                  title="Cambiar logo (o arrastra una imagen aquí)"
                   aria-label="Cambiar logo"
                   className="logo-avatar"
-                  style={{ position: 'relative', width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', border: '1px solid #e2e4e9', padding: 0, cursor: 'pointer', background: '#f7f7f8', flexShrink: 0 }}
+                  style={{
+                    position: 'relative', width: 52, height: 52, borderRadius: '50%', cursor: 'pointer', background: '#f7f7f8', flexShrink: 0,
+                    border: logoDropActive ? `2px dashed ${ACCENT}` : '1px solid #e2e4e9',
+                    boxShadow: logoDropActive ? `0 0 0 3px ${ACCENT}22` : 'none',
+                  }}
                 >
-                  <img src={logoSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4, boxSizing: 'border-box' }} />
-                  <span className="logo-avatar-overlay" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(31,36,48,0.55)', opacity: 0 }}>
-                    <IconImage size={16} color="#fff" />
-                  </span>
-                </button>
+                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden' }}>
+                    <img src={logoSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4, boxSizing: 'border-box' }} />
+                    <span className="logo-avatar-overlay" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(31,36,48,0.55)', borderRadius: '50%' }}>
+                      <IconImage size={16} color="#fff" />
+                    </span>
+                  </div>
+                  {logo && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); set('logo', null); }}
+                      title="Quitar logo"
+                      aria-label="Quitar logo"
+                      className="logo-remove-badge"
+                      style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: '#b03535', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
+                    >
+                      <IconClose color="#fff" />
+                    </button>
+                  )}
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={{ fontSize: 11, color: '#8a8f9c' }}>Logo institucional</span>
                   <button type="button" onClick={() => set('logo', null)} style={{ fontSize: 11, color: '#b03535', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>Quitar logo</button>
@@ -771,10 +875,11 @@ export default function HojasDePuntos() {
           <div style={{ padding: '12px 20px 20px', borderTop: '1px solid #eee' }}>
             <button
               onClick={downloadPdf}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 12px', border: 'none', borderRadius: 10, background: '#1f2430', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.2px' }}
+              disabled={isGeneratingPdf}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 12px', border: 'none', borderRadius: 10, background: '#1f2430', color: '#fff', fontSize: 13, fontWeight: 600, cursor: isGeneratingPdf ? 'default' : 'pointer', letterSpacing: '0.2px', opacity: isGeneratingPdf ? 0.75 : 1 }}
             >
-              <IconDownload color="#fff" />
-              Descargar PDF
+              {isGeneratingPdf ? <IconSpinner color="#fff" className="spin" /> : <IconDownload color="#fff" />}
+              {isGeneratingPdf ? 'Generando…' : 'Descargar PDF'}
             </button>
             <div style={{ fontSize: 11, color: '#9a9ea8', marginTop: 6, lineHeight: 1.4 }}>
               PDF vectorial — máxima nitidez al imprimir. Tus ajustes se guardan automáticamente en este navegador.
