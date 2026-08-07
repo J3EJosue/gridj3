@@ -239,6 +239,15 @@ const IconArrowDown = ({ size = 14, color = 'currentColor' }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" /></svg>
 );
 
+function SectionHeader({ icon, right, children }: { icon: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div style={{ ...sectionHeaderStyle, justifyContent: right ? 'space-between' : 'flex-start' }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{icon}{children}</span>
+      {right}
+    </div>
+  );
+}
+
 function Stepper({ value, min, max, step, suffix, onChange }: { value: number; min: number; max: number; step: number; suffix?: string; onChange: (v: number) => void }) {
   const clamp = (v: number) => Math.min(max, Math.max(min, Math.round(v / step) * step));
   const stepBtnStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 15, background: 'none', border: 'none', padding: 0, color: '#8a8f9c' };
@@ -598,10 +607,7 @@ export default function HojasDePuntos() {
                 <input type="text" value={cardId} onChange={(e) => set('cardId', e.target.value)} style={inputStyle} />
               </label>
 
-              <div style={sectionHeaderStyle}><IconType color="#8a8f9c" />Encabezado</div>
-              <label style={rowLabelStyle}>Mostrar
-                <Toggle checked={showHeader} onChange={(v) => set('showHeader', v)} />
-              </label>
+              <SectionHeader icon={<IconType color="#8a8f9c" />} right={<Toggle checked={showHeader} onChange={(v) => set('showHeader', v)} />}>Encabezado</SectionHeader>
               <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Tamaño de letra
                 <Stepper value={headerFontSize} min={8} max={16} step={0.5} suffix=" pt" onChange={(v) => set('headerFontSize', v)} />
               </div>
@@ -638,10 +644,7 @@ export default function HojasDePuntos() {
                 </div>
               </div>
 
-              <div style={sectionHeaderStyle}><IconImage color="#8a8f9c" />Posición del logo</div>
-              <label style={rowLabelStyle}>Mostrar
-                <Toggle checked={showLogo} onChange={(v) => set('showLogo', v)} />
-              </label>
+              <SectionHeader icon={<IconImage color="#8a8f9c" />} right={<Toggle checked={showLogo} onChange={(v) => set('showLogo', v)} />}>Posición del logo</SectionHeader>
               <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Tamaño
                 <Stepper value={logoWidthMm} min={10} max={60} step={1} suffix=" mm" onChange={(v) => set('logoWidthMm', v)} />
               </div>
