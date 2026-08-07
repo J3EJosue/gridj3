@@ -139,6 +139,8 @@ function loadImageDataUrl(src: string): Promise<string> {
   });
 }
 
+const MM_TO_PX = 96 / 25.4;
+
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: 12, color: '#333', marginBottom: 10 };
 const rowLabelStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#333', marginBottom: 10 };
 const selectStyle: React.CSSProperties = { fontSize: 12, padding: '3px 6px', borderRadius: 6, border: '1px solid #e2e4e9' };
@@ -151,6 +153,8 @@ export default function HojasDePuntos() {
   const [profiles, setProfiles] = useState<Profile[]>(DEFAULT_PROFILES);
   const [activeProfileId, setActiveProfileIdState] = useState('p-default');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewOuterRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(1);
 
   useEffect(() => {
     setSettings(loadSettings());
@@ -203,6 +207,25 @@ export default function HojasDePuntos() {
   };
 
   const preset = PAPER_PRESETS[settings.paperPreset] || PAPER_PRESETS.letter;
+  const pageWidthPx = preset.w * MM_TO_PX;
+  const pageHeightPx = preset.h * MM_TO_PX;
+
+  // The sheet is laid out at its true physical size (pageWidthPx), which
+  // overflows narrow viewports (mobile, a narrower browser window) — without
+  // this it just shows a cropped, zoomed-in slice of the page. previewOuter's
+  // CSS width already resolves to min(100%, pageWidthPx), so its measured
+  // width tells us how much the absolutely-positioned .page needs to shrink
+  // (via transform) to fit exactly inside it.
+  useEffect(() => {
+    const el = previewOuterRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0].contentRect.width;
+      if (w > 0) setPreviewScale(Math.min(1, w / pageWidthPx));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [pageWidthPx]);
 
   async function downloadPdf() {
     const { jsPDF } = await import('jspdf');
@@ -352,9 +375,13 @@ export default function HojasDePuntos() {
   }
 
   const pageStyle: React.CSSProperties = {
-    position: 'relative',
-    width: `${preset.w}mm`,
-    height: `${preset.h}mm`,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: pageWidthPx,
+    height: pageHeightPx,
+    transform: `scale(${previewScale})`,
+    transformOrigin: 'top left',
     backgroundColor: '#ffffff',
     backgroundImage,
     backgroundSize,
@@ -415,7 +442,16 @@ export default function HojasDePuntos() {
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24, padding: '32px 16px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '0 0 32px' }}>
+        <div
+          ref={previewOuterRef}
+          style={{
+            width: `min(100%, ${pageWidthPx}px)`,
+            aspectRatio: `${pageWidthPx} / ${pageHeightPx}`,
+            position: 'relative',
+            overflow: 'hidden',
+            margin: '0 0 32px',
+          }}
+        >
           <section className="page" style={pageStyle}>
             {cornerTicks.map((style, i) => <div key={i} style={style} />)}
             <div style={headerWrapStyle}>
@@ -439,9 +475,25 @@ export default function HojasDePuntos() {
           </section>
         </div>
 
-        <div className="settings-panel" style={{ width: 280, flex: '0 0 280px', background: '#fff', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)', padding: 20, position: 'sticky', top: 32, maxHeight: 'calc(100vh - 64px)', overflowY: 'auto' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.3px', color: '#1f2430', marginBottom: 14 }}>Ajustes</div>
+        <div
+          className="settings-panel"
+          style={{
+            width: 280,
+            flex: '0 0 280px',
+            background: '#fff',
+            borderRadius: 10,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
+            position: 'sticky',
+            top: 32,
+            maxHeight: 'calc(100vh - 64px)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.3px', color: '#1f2430', padding: '20px 20px 0' }}>Ajustes</div>
 
+          <div style={{ overflowY: 'auto', padding: '14px 20px 0', flex: '1 1 auto', minHeight: 0 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: '#8a8f9c', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 8px' }}>Perfil</div>
           <label style={rowLabelStyle}>Perfil
             <select value={activeProfileId} onChange={(e) => setActiveProfileIdState(e.target.value)} style={{ ...selectStyle, maxWidth: 150 }}>
@@ -534,13 +586,16 @@ export default function HojasDePuntos() {
             <input type="range" min={0.1} max={1} step={0.05} value={logoOpacity} onChange={(e) => set('logoOpacity', parseFloat(e.target.value))} style={{ width: '100%' }} />
           </label>
 
-          <label style={labelStyle}>Número de hojas &mdash; {pageCount}
+          <label style={{ ...labelStyle, marginBottom: 16 }}>Número de hojas &mdash; {pageCount}
             <input type="range" min={1} max={20} step={1} value={pageCount} onChange={(e) => set('pageCount', parseInt(e.target.value, 10))} style={{ width: '100%' }} />
           </label>
+          </div>
 
-          <button onClick={downloadPdf} style={{ width: '100%', padding: '10px 12px', border: 'none', borderRadius: 8, background: '#1f2430', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.2px' }}>Descargar PDF</button>
-          <div style={{ fontSize: 11, color: '#9a9ea8', marginTop: 6, lineHeight: 1.4 }}>
-            PDF vectorial de {pageCount} hoja(s) — máxima nitidez al imprimir. Tus ajustes y perfiles se guardan automáticamente en este navegador.
+          <div style={{ padding: '12px 20px 20px', borderTop: '1px solid #eee' }}>
+            <button onClick={downloadPdf} style={{ width: '100%', padding: '10px 12px', border: 'none', borderRadius: 8, background: '#1f2430', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.2px' }}>Descargar PDF</button>
+            <div style={{ fontSize: 11, color: '#9a9ea8', marginTop: 6, lineHeight: 1.4 }}>
+              PDF vectorial de {pageCount} hoja(s) — máxima nitidez al imprimir. Tus ajustes y perfiles se guardan automáticamente en este navegador.
+            </div>
           </div>
         </div>
       </div>
