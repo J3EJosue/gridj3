@@ -53,8 +53,8 @@ const DOT_COLOR_PRESETS = ['#9AA0A6', '#B0B0B0', '#4A4A4A', '#2E5AAC'];
 const ACCENT = '#2f6fed';
 
 const DEFAULT_SETTINGS: Settings = {
-  name: 'Josue Manuel Cruz Boror',
-  cardId: '1190-26-558',
+  name: 'Josue C.',
+  cardId: '2024-01-847',
   logo: null,
   paperPreset: 'letter',
   orientation: 'portrait',
