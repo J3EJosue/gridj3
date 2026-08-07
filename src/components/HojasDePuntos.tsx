@@ -27,7 +27,6 @@ interface Settings {
   logoWidthMm: number;
   logoOffsetBottomMm: number;
   logoOpacity: number;
-  pageCount: number;
 }
 
 const PAPER_PRESETS: Record<PaperKey, { label: string; w: number; h: number }> = {
@@ -58,7 +57,6 @@ const DEFAULT_SETTINGS: Settings = {
   logoWidthMm: 28,
   logoOffsetBottomMm: 10,
   logoOpacity: 1,
-  pageCount: 1,
 };
 
 const SETTINGS_KEY = 'hoja-de-puntos-ajustes';
@@ -300,20 +298,13 @@ export default function HojasDePuntos() {
     };
     await drawHeaderAndLogo();
 
-    const count = Math.max(s.pageCount || 1, 1);
-    for (let i = 1; i < count; i++) {
-      doc.addPage([pw, ph]);
-      drawPatternPage();
-      await drawHeaderAndLogo();
-    }
-
     doc.save('hoja-de-puntos.pdf');
   }
 
   // ---- Live preview background pattern (matches print output in mm units) ----
   const { name, cardId, logo, paperPreset, marginTopMm, marginBottomMm, marginSideMm, dotSpacingMm: spacing, dotSizeMm: dotSize,
     dotColor, dotOpacity, showHeader, headerFontSize, headerOffsetTopMm, showLogo, logoWidthMm,
-    logoOffsetBottomMm, logoOpacity, patternType, pageCount } = settings;
+    logoOffsetBottomMm, logoOpacity, patternType } = settings;
 
   const logoSrc = logo || DEFAULT_LOGO;
 
@@ -568,13 +559,8 @@ export default function HojasDePuntos() {
               <label style={rowLabelStyle}>Color
                 <input type="color" value={dotColor} onChange={(e) => set('dotColor', e.target.value)} style={{ width: 36, height: 24, border: 'none', padding: 0, background: 'none' }} />
               </label>
-              <label style={labelStyle}>Opacidad &mdash; {dotOpacity}
+              <label style={{ ...labelStyle, marginBottom: 0 }}>Opacidad &mdash; {dotOpacity}
                 <input type="range" min={0.1} max={1} step={0.05} value={dotOpacity} onChange={(e) => set('dotOpacity', parseFloat(e.target.value))} style={{ width: '100%' }} />
-              </label>
-
-              <div style={sectionHeaderStyle}>Exportar</div>
-              <label style={{ ...labelStyle, marginBottom: 0 }}>Número de hojas &mdash; {pageCount}
-                <input type="range" min={1} max={20} step={1} value={pageCount} onChange={(e) => set('pageCount', parseInt(e.target.value, 10))} style={{ width: '100%' }} />
               </label>
             </div>
 
@@ -584,7 +570,7 @@ export default function HojasDePuntos() {
           <div style={{ padding: '12px 20px 20px', borderTop: '1px solid #eee' }}>
             <button onClick={downloadPdf} style={{ width: '100%', padding: '10px 12px', border: 'none', borderRadius: 8, background: '#1f2430', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.2px' }}>Descargar PDF</button>
             <div style={{ fontSize: 11, color: '#9a9ea8', marginTop: 6, lineHeight: 1.4 }}>
-              PDF vectorial de {pageCount} hoja(s) — máxima nitidez al imprimir. Tus ajustes se guardan automáticamente en este navegador.
+              PDF vectorial — máxima nitidez al imprimir. Tus ajustes se guardan automáticamente en este navegador.
             </div>
           </div>
         </div>
