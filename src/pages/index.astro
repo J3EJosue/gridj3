@@ -31,6 +31,24 @@ import HojasDePuntos from '../components/HojasDePuntos';
 					grid-template-columns: 1fr;
 				}
 			}
+			.settings-panel input[type="range"] {
+				accent-color: #2f6fed;
+			}
+			.settings-panel input[type="text"] {
+				transition: border-color 0.15s ease, box-shadow 0.15s ease;
+			}
+			.settings-panel input[type="text"]:focus {
+				outline: none;
+				border-color: #2f6fed;
+				box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.15);
+			}
+			.logo-avatar-overlay {
+				transition: opacity 0.15s ease;
+			}
+			.logo-avatar:hover .logo-avatar-overlay,
+			.logo-avatar:focus-visible .logo-avatar-overlay {
+				opacity: 1;
+			}
 			@media print {
 				html, body {
 					background: #fff !important;

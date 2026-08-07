@@ -37,6 +37,18 @@ const PAPER_PRESETS: Record<PaperKey, { label: string; w: number; h: number }> =
   moleskine: { label: 'Moleskine', w: 130, h: 210 },
 };
 
+const PATTERN_LABELS: Record<PatternKey, string> = {
+  dots: 'Puntos',
+  lines: 'Líneas',
+  grid: 'Cuadrícula',
+  isometric: 'Isométrico',
+  calligraphy: 'Caligrafía',
+  music: 'Pentagrama',
+};
+
+const DOT_COLOR_PRESETS = ['#9AA0A6', '#B0B0B0', '#4A4A4A', '#2E5AAC'];
+const ACCENT = '#2f6fed';
+
 const DEFAULT_SETTINGS: Settings = {
   name: 'Josue Manuel Cruz Boror',
   cardId: '1190-26-558',
@@ -101,6 +113,50 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 
+// Shared by the live sheet preview (tile = spacing in px, dotSizePx = grosor
+// in px) and the small pattern-picker swatches (fixed representative tile/
+// dot size, so the icons stay a consistent size regardless of the user's
+// actual spacing/grosor sliders).
+function patternBackground(pattern: PatternKey, dotColor: string, dotOpacity: number, tile: number, dotSizePx: number) {
+  if (pattern === 'isometric') {
+    const c = hexToRgba(dotColor, dotOpacity);
+    return {
+      backgroundImage: `linear-gradient(30deg, ${c} 1px, transparent 1px), linear-gradient(150deg, ${c} 1px, transparent 1px), linear-gradient(90deg, ${c} 1px, transparent 1px)`,
+      backgroundSize: `${tile}px ${tile}px`,
+    };
+  }
+  const fillColor = dotColor.replace('#', '%23');
+  const r = dotSizePx / 2;
+  const strokeW = Math.max(dotSizePx * 0.6, 0.6);
+  let svg: string;
+  if (pattern === 'lines') {
+    svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${tile}' height='${tile}'>` +
+      `<line x1='0' y1='${tile}' x2='${tile}' y2='${tile}' stroke='${fillColor}' stroke-opacity='${dotOpacity}' stroke-width='${strokeW}'/></svg>`;
+  } else if (pattern === 'grid') {
+    svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${tile}' height='${tile}'>` +
+      `<line x1='0' y1='${tile}' x2='${tile}' y2='${tile}' stroke='${fillColor}' stroke-opacity='${dotOpacity}' stroke-width='${strokeW}'/>` +
+      `<line x1='${tile}' y1='0' x2='${tile}' y2='${tile}' stroke='${fillColor}' stroke-opacity='${dotOpacity}' stroke-width='${strokeW}'/></svg>`;
+  } else if (pattern === 'calligraphy') {
+    const xY = tile * 0.55, baseY = tile * 0.92;
+    svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${tile}' height='${tile}'>` +
+      `<line x1='0' y1='${xY}' x2='${tile}' y2='${xY}' stroke='${fillColor}' stroke-opacity='${dotOpacity * 0.55}' stroke-width='${strokeW * 0.6}'/>` +
+      `<line x1='0' y1='${baseY}' x2='${tile}' y2='${baseY}' stroke='${fillColor}' stroke-opacity='${dotOpacity}' stroke-width='${strokeW}'/></svg>`;
+  } else if (pattern === 'music') {
+    const pad = tile * 0.08;
+    const lineGapPx = Math.max(Math.min(tile * 0.13, tile / 6), 4);
+    let lines = '';
+    for (let i = 0; i < 5; i++) {
+      const y = pad + i * lineGapPx;
+      lines += `<line x1='0' y1='${y}' x2='${tile}' y2='${y}' stroke='${fillColor}' stroke-opacity='${dotOpacity}' stroke-width='${strokeW * 0.7}'/>`;
+    }
+    svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${tile}' height='${tile}'>${lines}</svg>`;
+  } else {
+    svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${tile}' height='${tile}'>` +
+      `<circle cx='${tile / 2}' cy='${tile / 2}' r='${r}' fill='${fillColor}' fill-opacity='${dotOpacity}'/></svg>`;
+  }
+  return { backgroundImage: `url("data:image/svg+xml,${svg}")`, backgroundSize: `${tile}px ${tile}px` };
+}
+
 function clipLineToRect(
   x1: number, y1: number, x2: number, y2: number,
   xmin: number, ymin: number, xmax: number, ymax: number
@@ -146,9 +202,44 @@ const MM_TO_PX = 96 / 25.4;
 
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: 12, color: '#333', marginBottom: 10 };
 const rowLabelStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#333', marginBottom: 10 };
-const selectStyle: React.CSSProperties = { fontSize: 12, padding: '3px 6px', borderRadius: 6, border: '1px solid #e2e4e9' };
-const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', fontSize: 12, padding: '5px 7px', borderRadius: 6, border: '1px solid #e2e4e9', marginTop: 3 };
-const sectionHeaderStyle: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: '#8a8f9c', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '16px 0 8px' };
+const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', fontSize: 12, padding: '6px 8px', borderRadius: 8, border: '1px solid #e2e4e9', marginTop: 3 };
+const sectionHeaderStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: '#8a8f9c', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '18px 0 10px' };
+
+// ---- Minimal inline icon set (generic line-icon shapes, no external deps) ----
+type IconProps = { size?: number; color?: string };
+const IconIdentity = ({ size = 12, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+);
+const IconType = ({ size = 12, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" /></svg>
+);
+const IconImage = ({ size = 12, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
+);
+const IconFile = ({ size = 12, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+);
+const IconGrid = ({ size = 12, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /></svg>
+);
+const IconDownload = ({ size = 14, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+);
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label style={{ position: 'relative', display: 'inline-block', width: 34, height: 20, flexShrink: 0, cursor: 'pointer' }}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ position: 'absolute', inset: 0, opacity: 0, margin: 0, cursor: 'pointer' }}
+      />
+      <span style={{ position: 'absolute', inset: 0, borderRadius: 999, background: checked ? ACCENT : '#d7d9de', transition: 'background 0.15s ease', pointerEvents: 'none' }} />
+      <span style={{ position: 'absolute', top: 2, left: checked ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)', transition: 'left 0.15s ease', pointerEvents: 'none' }} />
+    </label>
+  );
+}
 
 export default function HojasDePuntos() {
   const [ready, setReady] = useState(false);
@@ -307,50 +398,10 @@ export default function HojasDePuntos() {
     logoOffsetBottomMm, logoOpacity, patternType } = settings;
 
   const logoSrc = logo || DEFAULT_LOGO;
-
   const svgPxPerMm = 10;
-  const tile = spacing * svgPxPerMm;
-  const r = (dotSize / 2) * svgPxPerMm;
-  const strokeW = Math.max(dotSize * svgPxPerMm * 0.6, 0.6);
-  const fillColor = dotColor.replace('#', '%23');
 
-  let backgroundImage: string, backgroundSize: string, backgroundPosition: string;
-  if (patternType === 'isometric') {
-    const c = hexToRgba(dotColor, dotOpacity);
-    backgroundImage = `linear-gradient(30deg, ${c} 1px, transparent 1px), linear-gradient(150deg, ${c} 1px, transparent 1px), linear-gradient(90deg, ${c} 1px, transparent 1px)`;
-    backgroundSize = `${spacing}mm ${spacing}mm`;
-    backgroundPosition = `${marginSideMm}mm ${marginTopMm}mm`;
-  } else {
-    let svg: string;
-    if (patternType === 'lines') {
-      svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${tile}' height='${tile}'>` +
-        `<line x1='0' y1='${tile}' x2='${tile}' y2='${tile}' stroke='${fillColor}' stroke-opacity='${dotOpacity}' stroke-width='${strokeW}'/></svg>`;
-    } else if (patternType === 'grid') {
-      svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${tile}' height='${tile}'>` +
-        `<line x1='0' y1='${tile}' x2='${tile}' y2='${tile}' stroke='${fillColor}' stroke-opacity='${dotOpacity}' stroke-width='${strokeW}'/>` +
-        `<line x1='${tile}' y1='0' x2='${tile}' y2='${tile}' stroke='${fillColor}' stroke-opacity='${dotOpacity}' stroke-width='${strokeW}'/></svg>`;
-    } else if (patternType === 'calligraphy') {
-      const xY = tile * 0.55, baseY = tile * 0.92;
-      svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${tile}' height='${tile}'>` +
-        `<line x1='0' y1='${xY}' x2='${tile}' y2='${xY}' stroke='${fillColor}' stroke-opacity='${dotOpacity * 0.55}' stroke-width='${strokeW * 0.6}'/>` +
-        `<line x1='0' y1='${baseY}' x2='${tile}' y2='${baseY}' stroke='${fillColor}' stroke-opacity='${dotOpacity}' stroke-width='${strokeW}'/></svg>`;
-    } else if (patternType === 'music') {
-      const pad = tile * 0.08;
-      const lineGapPx = Math.max(Math.min(tile * 0.13, tile / 6), 4);
-      let lines = '';
-      for (let i = 0; i < 5; i++) {
-        const y = pad + i * lineGapPx;
-        lines += `<line x1='0' y1='${y}' x2='${tile}' y2='${y}' stroke='${fillColor}' stroke-opacity='${dotOpacity}' stroke-width='${strokeW * 0.7}'/>`;
-      }
-      svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${tile}' height='${tile}'>${lines}</svg>`;
-    } else {
-      svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${tile}' height='${tile}'>` +
-        `<circle cx='${tile / 2}' cy='${tile / 2}' r='${r}' fill='${fillColor}' fill-opacity='${dotOpacity}'/></svg>`;
-    }
-    backgroundImage = `url("data:image/svg+xml,${svg}")`;
-    backgroundSize = `${spacing}mm ${spacing}mm`;
-    backgroundPosition = `${marginSideMm}mm ${marginTopMm}mm`;
-  }
+  const { backgroundImage, backgroundSize } = patternBackground(patternType, dotColor, dotOpacity, spacing * svgPxPerMm, dotSize * svgPxPerMm);
+  const backgroundPosition = `${marginSideMm}mm ${marginTopMm}mm`;
 
   const pageStyle: React.CSSProperties = {
     position: 'absolute',
@@ -462,7 +513,7 @@ export default function HojasDePuntos() {
           style={{
             width: `min(100%, 580px)`,
             background: '#fff',
-            borderRadius: 10,
+            borderRadius: 14,
             boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
             position: 'sticky',
             top: 32,
@@ -472,29 +523,49 @@ export default function HojasDePuntos() {
             overflow: 'hidden',
           }}
         >
-          <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.3px', color: '#1f2430', padding: '20px 20px 0' }}>Ajustes</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, letterSpacing: '0.2px', color: '#1f2430', padding: '20px 20px 0' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: ACCENT, display: 'inline-block' }} />
+            Ajustes
+          </div>
 
           <div style={{ overflowY: 'auto', padding: '14px 20px 0', flex: '1 1 auto', minHeight: 0 }}>
           <div className="settings-grid">
 
             <div>
-              <div style={{ ...sectionHeaderStyle, marginTop: 0 }}>Identidad</div>
+              <div style={{ ...sectionHeaderStyle, marginTop: 0 }}><IconIdentity color="#8a8f9c" />Identidad</div>
+
+              {/* Logo avatar: click or drop to change, hover reveals the change affordance */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Cambiar logo"
+                  aria-label="Cambiar logo"
+                  className="logo-avatar"
+                  style={{ position: 'relative', width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', border: '1px solid #e2e4e9', padding: 0, cursor: 'pointer', background: '#f7f7f8', flexShrink: 0 }}
+                >
+                  <img src={logoSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4, boxSizing: 'border-box' }} />
+                  <span className="logo-avatar-overlay" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(31,36,48,0.55)', opacity: 0 }}>
+                    <IconImage size={16} color="#fff" />
+                  </span>
+                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 11, color: '#8a8f9c' }}>Logo institucional</span>
+                  <button type="button" onClick={() => set('logo', null)} style={{ fontSize: 11, color: '#b03535', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>Quitar logo</button>
+                </div>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={setLogoFile} style={{ display: 'none' }} />
+              </div>
+
               <label style={labelStyle}>Nombre
                 <input type="text" value={name} onChange={(e) => set('name', e.target.value)} style={inputStyle} />
               </label>
-              <label style={labelStyle}>Carnet / código
+              <label style={{ ...labelStyle, marginBottom: 4 }}>Carnet / código
                 <input type="text" value={cardId} onChange={(e) => set('cardId', e.target.value)} style={inputStyle} />
               </label>
-              <label style={{ display: 'block', fontSize: 12, color: '#333', marginBottom: 8 }}>Logo
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={setLogoFile} style={{ display: 'block', width: '100%', fontSize: 11, marginTop: 3 }} />
-              </label>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                <button onClick={() => set('logo', null)} style={{ flex: 1, padding: '6px 8px', border: '1px solid #e2e4e9', borderRadius: 6, background: '#fff', color: '#555', fontSize: 11, cursor: 'pointer' }}>Quitar logo</button>
-              </div>
 
-              <div style={sectionHeaderStyle}>Encabezado</div>
+              <div style={sectionHeaderStyle}><IconType color="#8a8f9c" />Encabezado</div>
               <label style={rowLabelStyle}>Mostrar
-                <input type="checkbox" checked={showHeader} onChange={(e) => set('showHeader', e.target.checked)} />
+                <Toggle checked={showHeader} onChange={(v) => set('showHeader', v)} />
               </label>
               <label style={labelStyle}>Tamaño de letra &mdash; {headerFontSize} pt
                 <input type="range" min={8} max={16} step={0.5} value={headerFontSize} onChange={(e) => set('headerFontSize', parseFloat(e.target.value))} style={{ width: '100%' }} />
@@ -503,9 +574,9 @@ export default function HojasDePuntos() {
                 <input type="range" min={-10} max={20} step={1} value={headerOffsetTopMm} onChange={(e) => set('headerOffsetTopMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
               </label>
 
-              <div style={sectionHeaderStyle}>Logo</div>
+              <div style={sectionHeaderStyle}><IconImage color="#8a8f9c" />Posición del logo</div>
               <label style={rowLabelStyle}>Mostrar
-                <input type="checkbox" checked={showLogo} onChange={(e) => set('showLogo', e.target.checked)} />
+                <Toggle checked={showLogo} onChange={(v) => set('showLogo', v)} />
               </label>
               <label style={labelStyle}>Tamaño &mdash; {logoWidthMm} mm
                 <input type="range" min={10} max={60} step={1} value={logoWidthMm} onChange={(e) => set('logoWidthMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
@@ -519,26 +590,55 @@ export default function HojasDePuntos() {
             </div>
 
             <div>
-              <div style={{ ...sectionHeaderStyle, marginTop: 0 }}>Página</div>
-              <label style={rowLabelStyle}>Tamaño
-                <select value={paperPreset} onChange={(e) => set('paperPreset', e.target.value as PaperKey)} style={selectStyle}>
-                  <option value="letter">Carta</option>
-                  <option value="a4">A4</option>
-                  <option value="halfLetter">Media carta</option>
-                  <option value="a5">A5</option>
-                  <option value="moleskine">Moleskine</option>
-                </select>
-              </label>
-              <label style={rowLabelStyle}>Patrón
-                <select value={patternType} onChange={(e) => set('patternType', e.target.value as PatternKey)} style={selectStyle}>
-                  <option value="dots">Puntos</option>
-                  <option value="lines">Líneas</option>
-                  <option value="grid">Cuadrícula</option>
-                  <option value="isometric">Isométrico</option>
-                  <option value="calligraphy">Caligrafía</option>
-                  <option value="music">Pentagrama</option>
-                </select>
-              </label>
+              <div style={{ ...sectionHeaderStyle, marginTop: 0 }}><IconFile color="#8a8f9c" />Página &mdash; {preset.label}</div>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+                {(Object.entries(PAPER_PRESETS) as [PaperKey, typeof PAPER_PRESETS[PaperKey]][]).map(([key, p]) => {
+                  const selected = key === paperPreset;
+                  const h = 34, w = Math.round(h * (p.w / p.h));
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      title={p.label}
+                      aria-label={p.label}
+                      onClick={() => set('paperPreset', key)}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                    >
+                      <span style={{
+                        display: 'block', width: w, height: h, background: '#fff', borderRadius: 3,
+                        border: selected ? `2px solid ${ACCENT}` : '1px solid #d7d9de',
+                        boxShadow: selected ? `0 0 0 3px ${ACCENT}22` : 'none',
+                      }} />
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={sectionHeaderStyle}><IconGrid color="#8a8f9c" />Patrón &mdash; {PATTERN_LABELS[patternType]}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: 16 }}>
+                {(Object.keys(PATTERN_LABELS) as PatternKey[]).map((key) => {
+                  const selected = key === patternType;
+                  const swatch = patternBackground(key, dotColor, dotOpacity, 14, 3);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      title={PATTERN_LABELS[key]}
+                      aria-label={PATTERN_LABELS[key]}
+                      onClick={() => set('patternType', key)}
+                      style={{
+                        width: '100%', aspectRatio: '1 / 1', borderRadius: 8,
+                        border: selected ? `2px solid ${ACCENT}` : '1px solid #e2e4e9',
+                        boxShadow: selected ? `0 0 0 3px ${ACCENT}22` : 'none',
+                        background: `#fff ${swatch.backgroundImage}`,
+                        backgroundSize: swatch.backgroundSize,
+                        cursor: 'pointer', padding: 0,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+
               <label style={labelStyle}>Margen superior &mdash; {marginTopMm} mm
                 <input type="range" min={8} max={30} step={1} value={marginTopMm} onChange={(e) => set('marginTopMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
               </label>
@@ -548,17 +648,44 @@ export default function HojasDePuntos() {
               <label style={labelStyle}>Margen lateral &mdash; {marginSideMm} mm
                 <input type="range" min={8} max={30} step={1} value={marginSideMm} onChange={(e) => set('marginSideMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
               </label>
-
-              <div style={sectionHeaderStyle}>Patrón</div>
               <label style={labelStyle}>Espaciado &mdash; {spacing} mm
                 <input type="range" min={3} max={14} step={0.5} value={spacing} onChange={(e) => set('dotSpacingMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
               </label>
               <label style={labelStyle}>Grosor &mdash; {dotSize} mm
                 <input type="range" min={0.15} max={0.8} step={0.05} value={dotSize} onChange={(e) => set('dotSizeMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
               </label>
-              <label style={rowLabelStyle}>Color
-                <input type="color" value={dotColor} onChange={(e) => set('dotColor', e.target.value)} style={{ width: 36, height: 24, border: 'none', padding: 0, background: 'none' }} />
-              </label>
+
+              <label style={{ ...labelStyle, marginBottom: 6 }}>Color</label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                {DOT_COLOR_PRESETS.map((c) => {
+                  const selected = dotColor.toLowerCase() === c.toLowerCase();
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      title={c}
+                      aria-label={c}
+                      onClick={() => set('dotColor', c)}
+                      style={{
+                        width: 22, height: 22, borderRadius: '50%', background: c, padding: 0, cursor: 'pointer',
+                        border: selected ? `2px solid ${ACCENT}` : '1px solid rgba(0,0,0,0.12)',
+                        boxShadow: selected ? `0 0 0 2px #fff, 0 0 0 4px ${ACCENT}55` : 'none',
+                      }}
+                    />
+                  );
+                })}
+                <label
+                  title="Color personalizado"
+                  style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(0,0,0,0.12)', cursor: 'pointer', position: 'relative', display: 'inline-block' }}
+                >
+                  <input
+                    type="color"
+                    value={dotColor}
+                    onChange={(e) => set('dotColor', e.target.value)}
+                    style={{ position: 'absolute', inset: -4, width: 'calc(100% + 8px)', height: 'calc(100% + 8px)', border: 'none', padding: 0, cursor: 'pointer' }}
+                  />
+                </label>
+              </div>
               <label style={{ ...labelStyle, marginBottom: 0 }}>Opacidad &mdash; {dotOpacity}
                 <input type="range" min={0.1} max={1} step={0.05} value={dotOpacity} onChange={(e) => set('dotOpacity', parseFloat(e.target.value))} style={{ width: '100%' }} />
               </label>
@@ -568,7 +695,13 @@ export default function HojasDePuntos() {
           </div>
 
           <div style={{ padding: '12px 20px 20px', borderTop: '1px solid #eee' }}>
-            <button onClick={downloadPdf} style={{ width: '100%', padding: '10px 12px', border: 'none', borderRadius: 8, background: '#1f2430', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.2px' }}>Descargar PDF</button>
+            <button
+              onClick={downloadPdf}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 12px', border: 'none', borderRadius: 10, background: '#1f2430', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.2px' }}
+            >
+              <IconDownload color="#fff" />
+              Descargar PDF
+            </button>
             <div style={{ fontSize: 11, color: '#9a9ea8', marginTop: 6, lineHeight: 1.4 }}>
               PDF vectorial — máxima nitidez al imprimir. Tus ajustes se guardan automáticamente en este navegador.
             </div>
