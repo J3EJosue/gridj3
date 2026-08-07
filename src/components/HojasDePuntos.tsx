@@ -210,22 +210,36 @@ export default function HojasDePuntos() {
   const pageWidthPx = preset.w * MM_TO_PX;
   const pageHeightPx = preset.h * MM_TO_PX;
 
-  // The sheet is laid out at its true physical size (pageWidthPx), which
-  // overflows narrow viewports (mobile, a narrower browser window) — without
-  // this it just shows a cropped, zoomed-in slice of the page. previewOuter's
-  // CSS width already resolves to min(100%, pageWidthPx), so its measured
-  // width tells us how much the absolutely-positioned .page needs to shrink
-  // (via transform) to fit exactly inside it.
+  // The sheet is laid out at its true physical size (pageWidthPx x
+  // pageHeightPx), which overflows both narrow viewports (shows a cropped,
+  // zoomed-in slice) and short ones (the header text/logo near the bottom
+  // sit below the fold, needing a scroll to reach). previewOuter's CSS width
+  // already resolves to min(100%, pageWidthPx) — its measured width is how
+  // much horizontal room the flex layout actually gives us — combined with
+  // the viewport height (minus the preview's own vertical margins), the
+  // smaller of the two ratios is how much the whole sheet (pattern, corner
+  // ticks, header text, logo — everything, since it's one transformed
+  // element) needs to shrink to be fully visible with no scrolling.
   useEffect(() => {
     const el = previewOuterRef.current;
     if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0].contentRect.width;
-      if (w > 0) setPreviewScale(Math.min(1, w / pageWidthPx));
-    });
+    const PREVIEW_VERTICAL_MARGIN = 64; // matches the 32px top/bottom spacing around the sheet
+    const recompute = () => {
+      const w = el.clientWidth;
+      const availH = window.innerHeight - PREVIEW_VERTICAL_MARGIN;
+      if (w > 0) {
+        setPreviewScale(Math.min(1, w / pageWidthPx, availH / pageHeightPx));
+      }
+    };
+    recompute();
+    const ro = new ResizeObserver(recompute);
     ro.observe(el);
-    return () => ro.disconnect();
-  }, [pageWidthPx]);
+    window.addEventListener('resize', recompute);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', recompute);
+    };
+  }, [pageWidthPx, pageHeightPx]);
 
   async function downloadPdf() {
     const { jsPDF } = await import('jspdf');
@@ -444,12 +458,15 @@ export default function HojasDePuntos() {
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24, padding: '32px 16px', flexWrap: 'wrap' }}>
         <div
           ref={previewOuterRef}
+          style={{ width: `min(100%, ${pageWidthPx}px)`, margin: '0 0 32px' }}
+        >
+        <div
           style={{
-            width: `min(100%, ${pageWidthPx}px)`,
-            aspectRatio: `${pageWidthPx} / ${pageHeightPx}`,
+            width: pageWidthPx * previewScale,
+            height: pageHeightPx * previewScale,
             position: 'relative',
             overflow: 'hidden',
-            margin: '0 0 32px',
+            margin: '0 auto',
           }}
         >
           <section className="page" style={pageStyle}>
@@ -473,6 +490,7 @@ export default function HojasDePuntos() {
               />
             )}
           </section>
+        </div>
         </div>
 
         <div
