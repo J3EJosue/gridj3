@@ -94,7 +94,7 @@ const SETTINGS_KEY = 'hoja-de-puntos-ajustes';
 // existing visitor's name/logo aren't reset to the defaults.
 const LEGACY_PROFILES_KEY = 'hoja-de-puntos-perfiles';
 const DEFAULT_LOGO = '/logo-mariano.webp';
-const DEFAULT_LOGO_DIMS = { width: 678, height: 669 };
+const DEFAULT_LOGO_DIMS = { width: 662, height: 685 };
 
 function loadSettings(): Settings {
   let merged: Partial<Settings> = {};
