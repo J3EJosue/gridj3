@@ -134,9 +134,17 @@ function hexToRgba(hex: string, alpha: number) {
 // actual spacing/grosor sliders).
 function patternBackground(pattern: PatternKey, dotColor: string, dotOpacity: number, tile: number, dotSizePx: number) {
   if (pattern === 'isometric') {
+    // A plain linear-gradient's "1px" hard stop only tiles into a clean
+    // repeating line at 0/90/45deg in a square tile — at 30/150deg the stop
+    // lands somewhere in the tile interior that doesn't line up edge-to-edge
+    // with the next tile, so the "line" mostly disappeared on repeat.
+    // repeating-linear-gradient repeats its own stops along the gradient
+    // axis directly, independent of background-size, so it tiles correctly
+    // at any angle.
     const c = hexToRgba(dotColor, dotOpacity);
+    const line = (deg: number) => `repeating-linear-gradient(${deg}deg, ${c} 0, ${c} 1px, transparent 1px, transparent ${tile}px)`;
     return {
-      backgroundImage: `linear-gradient(30deg, ${c} 1px, transparent 1px), linear-gradient(150deg, ${c} 1px, transparent 1px), linear-gradient(90deg, ${c} 1px, transparent 1px)`,
+      backgroundImage: `${line(30)}, ${line(150)}, ${line(90)}`,
       backgroundSize: `${tile}px ${tile}px`,
     };
   }
@@ -267,6 +275,9 @@ const IconLandscape = ({ size = 14, color = 'currentColor' }: IconProps) => (
 const IconPlus = ({ size = 12, color = 'currentColor' }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
 );
+const IconReset = ({ size = 12, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 2.64-6.36" /><polyline points="3 4 3 9 8 9" /></svg>
+);
 
 function SectionHeader({ icon, right, children }: { icon: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -335,6 +346,8 @@ export default function HojasDePuntos() {
   const set = <K extends keyof Settings>(key: K, val: Settings[K]) =>
     setSettings((s) => ({ ...s, [key]: val }));
 
+  const resetSettings = () => setSettings(DEFAULT_SETTINGS);
+
   // Picking a logo (preset or custom) should turn it on — otherwise choosing
   // one while "Mostrar" is off silently does nothing visible, which reads as
   // broken rather than as two independent settings.
@@ -392,6 +405,24 @@ export default function HojasDePuntos() {
       window.removeEventListener('resize', recompute);
     };
   }, [pageWidthPx, pageHeightPx]);
+
+  // Direct browser printing (Ctrl+P) is a secondary path to "Descargar PDF"
+  // — most people use the button, but the legend text has always invited
+  // printing straight from the page too. @page has no effect from a normal
+  // stylesheet rule (it must be a real @page at-rule), so it's injected here
+  // and kept in sync with the current paper size/orientation; the print CSS
+  // in index.astro resets the on-screen scale transform back to true size
+  // to match it.
+  useEffect(() => {
+    const id = 'dynamic-page-size';
+    let tag = document.getElementById(id) as HTMLStyleElement | null;
+    if (!tag) {
+      tag = document.createElement('style');
+      tag.id = id;
+      document.head.appendChild(tag);
+    }
+    tag.textContent = `@page { size: ${pageW_mm}mm ${pageH_mm}mm; margin: 0; }`;
+  }, [pageW_mm, pageH_mm]);
 
   async function downloadPdf() {
     setIsGeneratingPdf(true);
@@ -616,9 +647,16 @@ export default function HojasDePuntos() {
       <div className="preview-row" style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24, padding: '32px 16px' }}>
         <div
           ref={previewOuterRef}
-          style={{ width: `min(100%, ${pageWidthPx}px)`, minWidth: 0 }}
+          className="sheet-outer"
+          style={{
+            width: `min(100%, ${pageWidthPx}px)`,
+            minWidth: 0,
+            ['--page-w-px' as any]: `${pageWidthPx}px`,
+            ['--page-h-px' as any]: `${pageHeightPx}px`,
+          }}
         >
         <div
+          className="sheet-frame"
           style={{
             width: pageWidthPx * previewScale,
             height: pageHeightPx * previewScale,
@@ -666,7 +704,7 @@ export default function HojasDePuntos() {
               differentiate it from the printed page underneath. Sits in the
               top-right corner so it never competes with the header text,
               which is always left-aligned regardless of Abajo/Arriba. */}
-          <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 5, display: 'inline-flex', background: '#fff', borderRadius: 999, padding: 3, gap: 2, boxShadow: '0 2px 6px rgba(20,20,19,0.18), 0 8px 20px rgba(20,20,19,0.12)', border: '1px solid rgba(0,0,0,0.04)' }}>
+          <div className="orientation-pill" style={{ position: 'absolute', top: 10, right: 10, zIndex: 5, display: 'inline-flex', background: '#fff', borderRadius: 999, padding: 3, gap: 2, boxShadow: '0 2px 6px rgba(20,20,19,0.18), 0 8px 20px rgba(20,20,19,0.12)', border: '1px solid rgba(0,0,0,0.04)' }}>
             <button
               type="button"
               title="Vertical"
@@ -713,9 +751,20 @@ export default function HojasDePuntos() {
             overflow: 'hidden',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, letterSpacing: '0.2px', color: '#1f2430', padding: '20px 20px 0' }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: ACCENT, display: 'inline-block' }} />
-            Ajustes
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 20px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, letterSpacing: '0.2px', color: '#1f2430' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: ACCENT, display: 'inline-block' }} />
+              Ajustes
+            </div>
+            <button
+              type="button"
+              onClick={resetSettings}
+              title="Restablecer todos los ajustes"
+              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#8a8f9c', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
+              <IconReset />
+              Restablecer
+            </button>
           </div>
 
           <div style={{ overflowY: 'auto', padding: '14px 20px 0', flex: '1 1 auto', minHeight: 0 }}>
@@ -909,7 +958,8 @@ export default function HojasDePuntos() {
                         width: '100%', aspectRatio: '1 / 1', borderRadius: 8,
                         border: selected ? `2px solid ${ACCENT}` : '1px solid #e2e4e9',
                         boxShadow: selected ? `0 0 0 3px ${ACCENT}22` : 'none',
-                        background: `#fff ${swatch.backgroundImage}`,
+                        backgroundColor: '#fff',
+                        backgroundImage: swatch.backgroundImage,
                         backgroundSize: swatch.backgroundSize,
                         cursor: 'pointer', padding: 0,
                       }}

@@ -9,6 +9,16 @@ import HojasDePuntos from '../components/HojasDePuntos';
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
 		<title>Hojas de Puntos Personalizables</title>
+		<meta name="description" content="Genera hojas de cuaderno personalizadas (puntos, líneas, cuadrícula, isométrico, caligrafía, pentagrama) con tu nombre y logo institucional, y descárgalas en PDF vectorial listo para imprimir." />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://gridj3.vercel.app/" />
+		<meta property="og:title" content="Hojas de Puntos Personalizables" />
+		<meta property="og:description" content="Genera hojas de cuaderno personalizadas con tu nombre y logo institucional, y descárgalas en PDF listo para imprimir." />
+		<meta property="og:image" content="https://gridj3.vercel.app/og-image.png" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content="Hojas de Puntos Personalizables" />
+		<meta name="twitter:description" content="Genera hojas de cuaderno personalizadas con tu nombre y logo institucional, y descárgalas en PDF listo para imprimir." />
+		<meta name="twitter:image" content="https://gridj3.vercel.app/og-image.png" />
 		<style is:global>
 			body {
 				margin: 0;
@@ -70,12 +80,39 @@ import HojasDePuntos from '../components/HojasDePuntos';
 			.spin {
 				animation: spin 0.8s linear infinite;
 			}
+			/* Ctrl+P direct printing, as a secondary path to "Descargar PDF" (the
+			   legend text has always invited both). The @page rule matching the
+			   current paper/orientation is injected dynamically by the component;
+			   this resets the on-screen shrink-to-fit transform back to the
+			   sheet's true physical size so what prints matches @page exactly. */
 			@media print {
 				html, body {
 					background: #fff !important;
+					margin: 0 !important;
+					padding: 0 !important;
 				}
-				.settings-panel {
+				.settings-panel,
+				.orientation-pill {
 					display: none !important;
+				}
+				.preview-row {
+					padding: 0 !important;
+					gap: 0 !important;
+					justify-content: flex-start !important;
+				}
+				.sheet-outer {
+					width: var(--page-w-px) !important;
+				}
+				.sheet-frame {
+					width: var(--page-w-px) !important;
+					height: var(--page-h-px) !important;
+					overflow: visible !important;
+					margin: 0 !important;
+				}
+				.page {
+					transform: none !important;
+					box-shadow: none !important;
+					border-radius: 0 !important;
 				}
 			}
 		</style>
