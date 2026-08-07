@@ -435,7 +435,11 @@ export default function HojasDePuntos() {
     const { jsPDF } = await import('jspdf');
     const s = settings;
     const pw = pageW_mm, ph = pageH_mm;
-    const doc = new jsPDF({ unit: 'mm', format: [pw, ph] });
+    // jsPDF defaults orientation to 'portrait' and silently swaps a
+    // landscape [w, h] format back to portrait to match it, which left
+    // the drawing code below (using the original un-swapped pw/ph) writing
+    // outside the actual page bounds. Must state orientation explicitly.
+    const doc = new jsPDF({ unit: 'mm', format: [pw, ph], orientation: pw > ph ? 'landscape' : 'portrait' });
 
     const drawPatternPage = () => {
       doc.setDrawColor(s.dotColor);
