@@ -1043,6 +1043,10 @@ export default function HojasDePuntos() {
         <a href="https://github.com/J3EJosue" target="_blank" rel="noopener noreferrer" style={{ color: '#8a8e98', textDecoration: 'underline' }}>
           J3eJosue
         </a>
+        {' — '}
+        <a href="https://github.com/J3EJosue/gridj3" target="_blank" rel="noopener noreferrer" style={{ color: '#8a8e98', textDecoration: 'underline' }}>
+          repo
+        </a>
       </div>
     </>
   );
