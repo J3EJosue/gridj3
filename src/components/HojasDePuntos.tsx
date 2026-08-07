@@ -458,7 +458,7 @@ export default function HojasDePuntos() {
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24, padding: '32px 16px', flexWrap: 'wrap' }}>
         <div
           ref={previewOuterRef}
-          style={{ width: `min(100%, ${pageWidthPx}px)`, margin: '0 0 32px' }}
+          style={{ width: `min(100%, ${pageWidthPx}px)` }}
         >
         <div
           style={{
@@ -496,8 +496,7 @@ export default function HojasDePuntos() {
         <div
           className="settings-panel"
           style={{
-            width: 280,
-            flex: '0 0 280px',
+            width: `min(100%, 580px)`,
             background: '#fff',
             borderRadius: 10,
             boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
@@ -512,101 +511,110 @@ export default function HojasDePuntos() {
           <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.3px', color: '#1f2430', padding: '20px 20px 0' }}>Ajustes</div>
 
           <div style={{ overflowY: 'auto', padding: '14px 20px 0', flex: '1 1 auto', minHeight: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#8a8f9c', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 8px' }}>Perfil</div>
-          <label style={rowLabelStyle}>Perfil
-            <select value={activeProfileId} onChange={(e) => setActiveProfileIdState(e.target.value)} style={{ ...selectStyle, maxWidth: 150 }}>
-              {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </label>
-          <label style={labelStyle}>Nombre
-            <input type="text" value={activeProfile?.name ?? ''} onChange={(e) => updateActiveProfile('name', e.target.value)} style={inputStyle} />
-          </label>
-          <label style={labelStyle}>Carnet / código
-            <input type="text" value={activeProfile?.cardId ?? ''} onChange={(e) => updateActiveProfile('cardId', e.target.value)} style={inputStyle} />
-          </label>
-          <label style={{ display: 'block', fontSize: 12, color: '#333', marginBottom: 8 }}>Logo
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={setProfileLogo} style={{ display: 'block', width: '100%', fontSize: 11, marginTop: 3 }} />
-          </label>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <button onClick={() => updateActiveProfile('logo', null)} style={{ flex: 1, padding: '6px 8px', border: '1px solid #e2e4e9', borderRadius: 6, background: '#fff', color: '#555', fontSize: 11, cursor: 'pointer' }}>Quitar logo</button>
+          <div className="settings-grid">
+
+            <div>
+              <div style={{ ...sectionHeaderStyle, marginTop: 0 }}>Perfil</div>
+              <label style={rowLabelStyle}>Perfil
+                <select value={activeProfileId} onChange={(e) => setActiveProfileIdState(e.target.value)} style={{ ...selectStyle, maxWidth: 150 }}>
+                  {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </label>
+              <label style={labelStyle}>Nombre
+                <input type="text" value={activeProfile?.name ?? ''} onChange={(e) => updateActiveProfile('name', e.target.value)} style={inputStyle} />
+              </label>
+              <label style={labelStyle}>Carnet / código
+                <input type="text" value={activeProfile?.cardId ?? ''} onChange={(e) => updateActiveProfile('cardId', e.target.value)} style={inputStyle} />
+              </label>
+              <label style={{ display: 'block', fontSize: 12, color: '#333', marginBottom: 8 }}>Logo
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={setProfileLogo} style={{ display: 'block', width: '100%', fontSize: 11, marginTop: 3 }} />
+              </label>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <button onClick={() => updateActiveProfile('logo', null)} style={{ flex: 1, padding: '6px 8px', border: '1px solid #e2e4e9', borderRadius: 6, background: '#fff', color: '#555', fontSize: 11, cursor: 'pointer' }}>Quitar logo</button>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                <button onClick={addProfile} style={{ flex: 1, padding: '6px 8px', border: '1px solid #e2e4e9', borderRadius: 6, background: '#fff', color: '#333', fontSize: 11, cursor: 'pointer' }}>+ Nuevo</button>
+                <button onClick={deleteProfile} style={{ flex: 1, padding: '6px 8px', border: '1px solid #e2e4e9', borderRadius: 6, background: '#fff', color: '#b03535', fontSize: 11, cursor: 'pointer' }}>Eliminar</button>
+              </div>
+
+              <div style={sectionHeaderStyle}>Encabezado</div>
+              <label style={rowLabelStyle}>Mostrar
+                <input type="checkbox" checked={showHeader} onChange={(e) => set('showHeader', e.target.checked)} />
+              </label>
+              <label style={labelStyle}>Tamaño de letra &mdash; {headerFontSize} pt
+                <input type="range" min={8} max={16} step={0.5} value={headerFontSize} onChange={(e) => set('headerFontSize', parseFloat(e.target.value))} style={{ width: '100%' }} />
+              </label>
+              <label style={labelStyle}>Posición vertical &mdash; {headerOffsetTopMm} mm
+                <input type="range" min={-10} max={20} step={1} value={headerOffsetTopMm} onChange={(e) => set('headerOffsetTopMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
+              </label>
+
+              <div style={sectionHeaderStyle}>Logo</div>
+              <label style={rowLabelStyle}>Mostrar
+                <input type="checkbox" checked={showLogo} onChange={(e) => set('showLogo', e.target.checked)} />
+              </label>
+              <label style={labelStyle}>Tamaño &mdash; {logoWidthMm} mm
+                <input type="range" min={10} max={60} step={1} value={logoWidthMm} onChange={(e) => set('logoWidthMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
+              </label>
+              <label style={labelStyle}>Posición desde abajo &mdash; {logoOffsetBottomMm} mm
+                <input type="range" min={-20} max={60} step={1} value={logoOffsetBottomMm} onChange={(e) => set('logoOffsetBottomMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
+              </label>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>Opacidad &mdash; {logoOpacity}
+                <input type="range" min={0.1} max={1} step={0.05} value={logoOpacity} onChange={(e) => set('logoOpacity', parseFloat(e.target.value))} style={{ width: '100%' }} />
+              </label>
+            </div>
+
+            <div>
+              <div style={{ ...sectionHeaderStyle, marginTop: 0 }}>Página</div>
+              <label style={rowLabelStyle}>Tamaño
+                <select value={paperPreset} onChange={(e) => set('paperPreset', e.target.value as PaperKey)} style={selectStyle}>
+                  <option value="letter">Carta</option>
+                  <option value="a4">A4</option>
+                  <option value="halfLetter">Media carta</option>
+                  <option value="a5">A5</option>
+                  <option value="moleskine">Moleskine</option>
+                </select>
+              </label>
+              <label style={rowLabelStyle}>Patrón
+                <select value={patternType} onChange={(e) => set('patternType', e.target.value as PatternKey)} style={selectStyle}>
+                  <option value="dots">Puntos</option>
+                  <option value="lines">Líneas</option>
+                  <option value="grid">Cuadrícula</option>
+                  <option value="isometric">Isométrico</option>
+                  <option value="calligraphy">Caligrafía</option>
+                  <option value="music">Pentagrama</option>
+                </select>
+              </label>
+              <label style={labelStyle}>Margen superior &mdash; {marginTopMm} mm
+                <input type="range" min={8} max={30} step={1} value={marginTopMm} onChange={(e) => set('marginTopMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
+              </label>
+              <label style={labelStyle}>Margen inferior &mdash; {marginBottomMm} mm
+                <input type="range" min={8} max={30} step={1} value={marginBottomMm} onChange={(e) => set('marginBottomMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
+              </label>
+              <label style={labelStyle}>Margen lateral &mdash; {marginSideMm} mm
+                <input type="range" min={8} max={30} step={1} value={marginSideMm} onChange={(e) => set('marginSideMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
+              </label>
+
+              <div style={sectionHeaderStyle}>Patrón</div>
+              <label style={labelStyle}>Espaciado &mdash; {spacing} mm
+                <input type="range" min={3} max={14} step={0.5} value={spacing} onChange={(e) => set('dotSpacingMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
+              </label>
+              <label style={labelStyle}>Grosor &mdash; {dotSize} mm
+                <input type="range" min={0.15} max={0.8} step={0.05} value={dotSize} onChange={(e) => set('dotSizeMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
+              </label>
+              <label style={rowLabelStyle}>Color
+                <input type="color" value={dotColor} onChange={(e) => set('dotColor', e.target.value)} style={{ width: 36, height: 24, border: 'none', padding: 0, background: 'none' }} />
+              </label>
+              <label style={labelStyle}>Opacidad &mdash; {dotOpacity}
+                <input type="range" min={0.1} max={1} step={0.05} value={dotOpacity} onChange={(e) => set('dotOpacity', parseFloat(e.target.value))} style={{ width: '100%' }} />
+              </label>
+
+              <div style={sectionHeaderStyle}>Exportar</div>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>Número de hojas &mdash; {pageCount}
+                <input type="range" min={1} max={20} step={1} value={pageCount} onChange={(e) => set('pageCount', parseInt(e.target.value, 10))} style={{ width: '100%' }} />
+              </label>
+            </div>
+
           </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <button onClick={addProfile} style={{ flex: 1, padding: '6px 8px', border: '1px solid #e2e4e9', borderRadius: 6, background: '#fff', color: '#333', fontSize: 11, cursor: 'pointer' }}>+ Nuevo</button>
-            <button onClick={deleteProfile} style={{ flex: 1, padding: '6px 8px', border: '1px solid #e2e4e9', borderRadius: 6, background: '#fff', color: '#b03535', fontSize: 11, cursor: 'pointer' }}>Eliminar</button>
-          </div>
-
-          <div style={{ ...sectionHeaderStyle, marginTop: 0 }}>Página</div>
-          <label style={rowLabelStyle}>Tamaño
-            <select value={paperPreset} onChange={(e) => set('paperPreset', e.target.value as PaperKey)} style={selectStyle}>
-              <option value="letter">Carta</option>
-              <option value="a4">A4</option>
-              <option value="halfLetter">Media carta</option>
-              <option value="a5">A5</option>
-              <option value="moleskine">Moleskine</option>
-            </select>
-          </label>
-          <label style={rowLabelStyle}>Patrón
-            <select value={patternType} onChange={(e) => set('patternType', e.target.value as PatternKey)} style={selectStyle}>
-              <option value="dots">Puntos</option>
-              <option value="lines">Líneas</option>
-              <option value="grid">Cuadrícula</option>
-              <option value="isometric">Isométrico</option>
-              <option value="calligraphy">Caligrafía</option>
-              <option value="music">Pentagrama</option>
-            </select>
-          </label>
-          <label style={labelStyle}>Margen superior &mdash; {marginTopMm} mm
-            <input type="range" min={8} max={30} step={1} value={marginTopMm} onChange={(e) => set('marginTopMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
-          </label>
-          <label style={labelStyle}>Margen inferior &mdash; {marginBottomMm} mm
-            <input type="range" min={8} max={30} step={1} value={marginBottomMm} onChange={(e) => set('marginBottomMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
-          </label>
-          <label style={labelStyle}>Margen lateral &mdash; {marginSideMm} mm
-            <input type="range" min={8} max={30} step={1} value={marginSideMm} onChange={(e) => set('marginSideMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
-          </label>
-
-          <div style={sectionHeaderStyle}>Patrón</div>
-          <label style={labelStyle}>Espaciado &mdash; {spacing} mm
-            <input type="range" min={3} max={14} step={0.5} value={spacing} onChange={(e) => set('dotSpacingMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
-          </label>
-          <label style={labelStyle}>Grosor &mdash; {dotSize} mm
-            <input type="range" min={0.15} max={0.8} step={0.05} value={dotSize} onChange={(e) => set('dotSizeMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
-          </label>
-          <label style={rowLabelStyle}>Color
-            <input type="color" value={dotColor} onChange={(e) => set('dotColor', e.target.value)} style={{ width: 36, height: 24, border: 'none', padding: 0, background: 'none' }} />
-          </label>
-          <label style={labelStyle}>Opacidad &mdash; {dotOpacity}
-            <input type="range" min={0.1} max={1} step={0.05} value={dotOpacity} onChange={(e) => set('dotOpacity', parseFloat(e.target.value))} style={{ width: '100%' }} />
-          </label>
-
-          <div style={sectionHeaderStyle}>Encabezado</div>
-          <label style={rowLabelStyle}>Mostrar
-            <input type="checkbox" checked={showHeader} onChange={(e) => set('showHeader', e.target.checked)} />
-          </label>
-          <label style={labelStyle}>Tamaño de letra &mdash; {headerFontSize} pt
-            <input type="range" min={8} max={16} step={0.5} value={headerFontSize} onChange={(e) => set('headerFontSize', parseFloat(e.target.value))} style={{ width: '100%' }} />
-          </label>
-          <label style={labelStyle}>Posición vertical &mdash; {headerOffsetTopMm} mm
-            <input type="range" min={-10} max={20} step={1} value={headerOffsetTopMm} onChange={(e) => set('headerOffsetTopMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
-          </label>
-
-          <div style={sectionHeaderStyle}>Logo</div>
-          <label style={rowLabelStyle}>Mostrar
-            <input type="checkbox" checked={showLogo} onChange={(e) => set('showLogo', e.target.checked)} />
-          </label>
-          <label style={labelStyle}>Tamaño &mdash; {logoWidthMm} mm
-            <input type="range" min={10} max={60} step={1} value={logoWidthMm} onChange={(e) => set('logoWidthMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
-          </label>
-          <label style={labelStyle}>Posición desde abajo &mdash; {logoOffsetBottomMm} mm
-            <input type="range" min={-20} max={60} step={1} value={logoOffsetBottomMm} onChange={(e) => set('logoOffsetBottomMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
-          </label>
-          <label style={{ ...labelStyle, marginBottom: 16 }}>Opacidad &mdash; {logoOpacity}
-            <input type="range" min={0.1} max={1} step={0.05} value={logoOpacity} onChange={(e) => set('logoOpacity', parseFloat(e.target.value))} style={{ width: '100%' }} />
-          </label>
-
-          <label style={{ ...labelStyle, marginBottom: 16 }}>Número de hojas &mdash; {pageCount}
-            <input type="range" min={1} max={20} step={1} value={pageCount} onChange={(e) => set('pageCount', parseInt(e.target.value, 10))} style={{ width: '100%' }} />
-          </label>
           </div>
 
           <div style={{ padding: '12px 20px 20px', borderTop: '1px solid #eee' }}>

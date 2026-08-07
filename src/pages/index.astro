@@ -21,6 +21,16 @@ import HojasDePuntos from '../components/HojasDePuntos';
 			a:hover {
 				color: oklch(0.4 0.14 250);
 			}
+			.settings-grid {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 24px;
+			}
+			@media (max-width: 680px) {
+				.settings-grid {
+					grid-template-columns: 1fr;
+				}
+			}
 			@media print {
 				html, body {
 					background: #fff !important;
