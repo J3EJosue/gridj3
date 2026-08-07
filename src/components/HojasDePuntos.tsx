@@ -642,12 +642,12 @@ export default function HojasDePuntos() {
               <label style={rowLabelStyle}>Mostrar
                 <Toggle checked={showLogo} onChange={(v) => set('showLogo', v)} />
               </label>
-              <label style={labelStyle}>Tamaño &mdash; {logoWidthMm} mm
-                <input type="range" min={10} max={60} step={1} value={logoWidthMm} onChange={(e) => set('logoWidthMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
-              </label>
-              <label style={labelStyle}>Posición desde abajo &mdash; {logoOffsetBottomMm} mm
-                <input type="range" min={-20} max={60} step={1} value={logoOffsetBottomMm} onChange={(e) => set('logoOffsetBottomMm', parseFloat(e.target.value))} style={{ width: '100%' }} />
-              </label>
+              <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Tamaño
+                <Stepper value={logoWidthMm} min={10} max={60} step={1} suffix=" mm" onChange={(v) => set('logoWidthMm', v)} />
+              </div>
+              <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Posición desde abajo
+                <Stepper value={logoOffsetBottomMm} min={-20} max={60} step={1} suffix=" mm" onChange={(v) => set('logoOffsetBottomMm', v)} />
+              </div>
               <label style={{ ...labelStyle, marginBottom: 0 }}>Opacidad &mdash; {logoOpacity}
                 <input type="range" min={0.1} max={1} step={0.05} value={logoOpacity} onChange={(e) => set('logoOpacity', parseFloat(e.target.value))} style={{ width: '100%' }} />
               </label>
