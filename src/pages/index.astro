@@ -31,6 +31,20 @@ import HojasDePuntos from '../components/HojasDePuntos';
 					grid-template-columns: 1fr;
 				}
 			}
+			/* Below 680px the sheet and panel stack (mobile-friendly). At and
+			   above it they always stay side by side — the sheet's own
+			   width/height-fit scaling (computed in JS from previewOuterRef's
+			   actual measured width) shrinks it to make room instead of the row
+			   wrapping and pushing the panel down, e.g. when switching to a wider
+			   landscape orientation. */
+			.preview-row {
+				flex-wrap: wrap;
+			}
+			@media (min-width: 680px) {
+				.preview-row {
+					flex-wrap: nowrap;
+				}
+			}
 			.settings-panel input[type="range"] {
 				accent-color: #2f6fed;
 			}

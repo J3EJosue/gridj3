@@ -301,7 +301,6 @@ export default function HojasDePuntos() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewOuterRef = useRef<HTMLDivElement>(null);
-  const pillRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -359,11 +358,7 @@ export default function HojasDePuntos() {
     const PREVIEW_VERTICAL_MARGIN = 64; // matches the 32px top/bottom spacing around the sheet
     const recompute = () => {
       const w = el.clientWidth;
-      // The orientation pill sits above the sheet, inside previewOuterRef, so
-      // its rendered height (+ its own bottom margin) eats into the same
-      // vertical budget the sheet is being fit into.
-      const pillSpace = pillRef.current ? pillRef.current.offsetHeight + 12 : 0;
-      const availH = window.innerHeight - PREVIEW_VERTICAL_MARGIN - pillSpace;
+      const availH = window.innerHeight - PREVIEW_VERTICAL_MARGIN;
       if (w > 0) {
         setPreviewScale(Math.min(1, w / pageWidthPx, availH / pageHeightPx));
       }
@@ -598,45 +593,11 @@ export default function HojasDePuntos() {
 
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24, padding: '32px 16px', flexWrap: 'wrap' }}>
+      <div className="preview-row" style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 24, padding: '32px 16px' }}>
         <div
           ref={previewOuterRef}
-          style={{ width: `min(100%, ${pageWidthPx}px)` }}
+          style={{ width: `min(100%, ${pageWidthPx}px)`, minWidth: 0 }}
         >
-        <div ref={pillRef} style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-          <div style={{ display: 'inline-flex', background: '#fff', borderRadius: 999, padding: 3, gap: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)' }}>
-            <button
-              type="button"
-              title="Vertical"
-              aria-label="Vertical"
-              onClick={() => set('orientation', 'portrait')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                fontSize: 12, fontWeight: 600, letterSpacing: '0.1px',
-                background: orientation === 'portrait' ? ACCENT : 'transparent',
-                color: orientation === 'portrait' ? '#fff' : '#8a8f9c',
-              }}
-            >
-              <IconPortrait size={13} color={orientation === 'portrait' ? '#fff' : '#8a8f9c'} />
-              Vertical
-            </button>
-            <button
-              type="button"
-              title="Horizontal"
-              aria-label="Horizontal"
-              onClick={() => set('orientation', 'landscape')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                fontSize: 12, fontWeight: 600, letterSpacing: '0.1px',
-                background: orientation === 'landscape' ? ACCENT : 'transparent',
-                color: orientation === 'landscape' ? '#fff' : '#8a8f9c',
-              }}
-            >
-              <IconLandscape size={13} color={orientation === 'landscape' ? '#fff' : '#8a8f9c'} />
-              Horizontal
-            </button>
-          </div>
-        </div>
         <div
           style={{
             width: pageWidthPx * previewScale,
@@ -678,6 +639,41 @@ export default function HojasDePuntos() {
               />
             )}
           </section>
+
+          {/* Orientation pill: overlaid on the sheet itself (not scaled along
+              with .page, so it stays a consistent, comfortably-clickable size
+              regardless of zoom) — a strong shadow + opaque white background
+              differentiate it from the printed page underneath. Sits in the
+              top-right corner so it never competes with the header text,
+              which is always left-aligned regardless of Abajo/Arriba. */}
+          <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 5, display: 'inline-flex', background: '#fff', borderRadius: 999, padding: 3, gap: 2, boxShadow: '0 2px 6px rgba(20,20,19,0.18), 0 8px 20px rgba(20,20,19,0.12)', border: '1px solid rgba(0,0,0,0.04)' }}>
+            <button
+              type="button"
+              title="Vertical"
+              aria-label="Vertical"
+              onClick={() => set('orientation', 'portrait')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                background: orientation === 'portrait' ? ACCENT : 'transparent',
+                color: orientation === 'portrait' ? '#fff' : '#8a8f9c',
+              }}
+            >
+              <IconPortrait size={13} color={orientation === 'portrait' ? '#fff' : '#8a8f9c'} />
+            </button>
+            <button
+              type="button"
+              title="Horizontal"
+              aria-label="Horizontal"
+              onClick={() => set('orientation', 'landscape')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                background: orientation === 'landscape' ? ACCENT : 'transparent',
+                color: orientation === 'landscape' ? '#fff' : '#8a8f9c',
+              }}
+            >
+              <IconLandscape size={13} color={orientation === 'landscape' ? '#fff' : '#8a8f9c'} />
+            </button>
+          </div>
         </div>
         </div>
 
@@ -685,6 +681,7 @@ export default function HojasDePuntos() {
           className="settings-panel"
           style={{
             width: `min(100%, 580px)`,
+            flexShrink: 0,
             background: '#fff',
             borderRadius: 14,
             boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)',
