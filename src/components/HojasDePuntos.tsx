@@ -7,12 +7,14 @@ import { useEffect, useRef, useState } from 'react';
 type PaperKey = 'letter' | 'a4' | 'halfLetter' | 'a5' | 'moleskine';
 type PatternKey = 'dots' | 'lines' | 'grid' | 'isometric' | 'calligraphy' | 'music';
 type HeaderPosition = 'bottom' | 'top';
+type Orientation = 'portrait' | 'landscape';
 
 interface Settings {
   name: string;
   cardId: string;
   logo: string | null;
   paperPreset: PaperKey;
+  orientation: Orientation;
   patternType: PatternKey;
   marginTopMm: number;
   marginBottomMm: number;
@@ -55,6 +57,7 @@ const DEFAULT_SETTINGS: Settings = {
   cardId: '1190-26-558',
   logo: null,
   paperPreset: 'letter',
+  orientation: 'portrait',
   patternType: 'dots',
   marginTopMm: 15,
   marginBottomMm: 18,
@@ -244,6 +247,12 @@ const IconClose = ({ size = 10, color = 'currentColor' }: IconProps) => (
 const IconSpinner = ({ size = 14, color = 'currentColor', className }: IconProps & { className?: string }) => (
   <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round"><path d="M21 12a9 9 0 1 1-9-9" /></svg>
 );
+const IconPortrait = ({ size = 14, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2" width="12" height="20" rx="2" /></svg>
+);
+const IconLandscape = ({ size = 14, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" /></svg>
+);
 
 function SectionHeader({ icon, right, children }: { icon: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -292,6 +301,7 @@ export default function HojasDePuntos() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewOuterRef = useRef<HTMLDivElement>(null);
+  const pillRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -323,8 +333,15 @@ export default function HojasDePuntos() {
   };
 
   const preset = PAPER_PRESETS[settings.paperPreset] || PAPER_PRESETS.letter;
-  const pageWidthPx = preset.w * MM_TO_PX;
-  const pageHeightPx = preset.h * MM_TO_PX;
+  // PAPER_PRESETS are all stored portrait; landscape just swaps which
+  // dimension is width vs height. Margins, header and logo positions are
+  // all computed relative to these (marginTopMm/marginBottomMm/marginSideMm
+  // against pageW_mm/pageH_mm below), so they reposition themselves
+  // automatically on orientation change — no separate landscape math needed.
+  const pageW_mm = settings.orientation === 'landscape' ? preset.h : preset.w;
+  const pageH_mm = settings.orientation === 'landscape' ? preset.w : preset.h;
+  const pageWidthPx = pageW_mm * MM_TO_PX;
+  const pageHeightPx = pageH_mm * MM_TO_PX;
 
   // The sheet is laid out at its true physical size (pageWidthPx x
   // pageHeightPx), which overflows both narrow viewports (shows a cropped,
@@ -342,7 +359,11 @@ export default function HojasDePuntos() {
     const PREVIEW_VERTICAL_MARGIN = 64; // matches the 32px top/bottom spacing around the sheet
     const recompute = () => {
       const w = el.clientWidth;
-      const availH = window.innerHeight - PREVIEW_VERTICAL_MARGIN;
+      // The orientation pill sits above the sheet, inside previewOuterRef, so
+      // its rendered height (+ its own bottom margin) eats into the same
+      // vertical budget the sheet is being fit into.
+      const pillSpace = pillRef.current ? pillRef.current.offsetHeight + 12 : 0;
+      const availH = window.innerHeight - PREVIEW_VERTICAL_MARGIN - pillSpace;
       if (w > 0) {
         setPreviewScale(Math.min(1, w / pageWidthPx, availH / pageHeightPx));
       }
@@ -362,7 +383,7 @@ export default function HojasDePuntos() {
     try {
     const { jsPDF } = await import('jspdf');
     const s = settings;
-    const pw = preset.w, ph = preset.h;
+    const pw = pageW_mm, ph = pageH_mm;
     const doc = new jsPDF({ unit: 'mm', format: [pw, ph] });
 
     const drawPatternPage = () => {
@@ -453,7 +474,7 @@ export default function HojasDePuntos() {
   }
 
   // ---- Live preview background pattern (matches print output in mm units) ----
-  const { name, cardId, logo, paperPreset, marginTopMm, marginBottomMm, marginSideMm, dotSpacingMm: spacing, dotSizeMm: dotSize,
+  const { name, cardId, logo, paperPreset, orientation, marginTopMm, marginBottomMm, marginSideMm, dotSpacingMm: spacing, dotSizeMm: dotSize,
     dotColor, dotOpacity, showHeader, headerFontSize, headerPosition, showLogo, logoWidthMm,
     logoOffsetBottomMm, logoOpacity, patternType } = settings;
 
@@ -582,6 +603,40 @@ export default function HojasDePuntos() {
           ref={previewOuterRef}
           style={{ width: `min(100%, ${pageWidthPx}px)` }}
         >
+        <div ref={pillRef} style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          <div style={{ display: 'inline-flex', background: '#fff', borderRadius: 999, padding: 3, gap: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)' }}>
+            <button
+              type="button"
+              title="Vertical"
+              aria-label="Vertical"
+              onClick={() => set('orientation', 'portrait')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                fontSize: 12, fontWeight: 600, letterSpacing: '0.1px',
+                background: orientation === 'portrait' ? ACCENT : 'transparent',
+                color: orientation === 'portrait' ? '#fff' : '#8a8f9c',
+              }}
+            >
+              <IconPortrait size={13} color={orientation === 'portrait' ? '#fff' : '#8a8f9c'} />
+              Vertical
+            </button>
+            <button
+              type="button"
+              title="Horizontal"
+              aria-label="Horizontal"
+              onClick={() => set('orientation', 'landscape')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                fontSize: 12, fontWeight: 600, letterSpacing: '0.1px',
+                background: orientation === 'landscape' ? ACCENT : 'transparent',
+                color: orientation === 'landscape' ? '#fff' : '#8a8f9c',
+              }}
+            >
+              <IconLandscape size={13} color={orientation === 'landscape' ? '#fff' : '#8a8f9c'} />
+              Horizontal
+            </button>
+          </div>
+        </div>
         <div
           style={{
             width: pageWidthPx * previewScale,
