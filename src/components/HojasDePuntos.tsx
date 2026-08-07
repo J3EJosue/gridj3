@@ -75,6 +75,17 @@ const DEFAULT_SETTINGS: Settings = {
   logoOpacity: 1,
 };
 
+// `logo` stores either null (use the UMG default), a data: URL (a custom
+// upload), or one of these public paths (a preset pick) — the preview <img>
+// and the PDF's loadImageDataUrl() already handle any plain URL the same way
+// they handle DEFAULT_LOGO, so presets need no special-casing there.
+const UNIVERSITY_LOGOS: { key: string; label: string; src: string | null }[] = [
+  { key: 'umg', label: 'UMG', src: null },
+  { key: 'usac', label: 'USAC', src: '/logo-usac.webp' },
+  { key: 'url', label: 'URL', src: '/logo-url.webp' },
+  { key: 'uvg', label: 'UVG', src: '/logo-uvg.webp' },
+];
+
 const SETTINGS_KEY = 'hoja-de-puntos-ajustes';
 // Older versions of this app kept a whole multi-profile system (name/cardId/
 // logo per saved profile); it turned out nobody needed more than one, and it
@@ -754,6 +765,29 @@ export default function HojasDePuntos() {
                   <button type="button" onClick={() => set('logo', null)} style={{ fontSize: 11, color: '#b03535', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>Quitar logo</button>
                 </div>
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={setLogoFile} style={{ display: 'none' }} />
+              </div>
+
+              <label style={{ ...labelStyle, marginBottom: 6 }}>Logo de universidad</label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+                {UNIVERSITY_LOGOS.map((u) => {
+                  const selected = logo === u.src;
+                  return (
+                    <button
+                      key={u.key}
+                      type="button"
+                      title={u.label}
+                      aria-label={u.label}
+                      onClick={() => set('logo', u.src)}
+                      style={{
+                        width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', padding: 0, cursor: 'pointer', background: '#fff',
+                        border: selected ? `2px solid ${ACCENT}` : '1px solid #e2e4e9',
+                        boxShadow: selected ? `0 0 0 2px #fff, 0 0 0 4px ${ACCENT}55` : 'none',
+                      }}
+                    >
+                      <img src={u.src ?? DEFAULT_LOGO} alt={u.label} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2, boxSizing: 'border-box' }} />
+                    </button>
+                  );
+                })}
               </div>
 
               <SectionHeader icon={<IconImage color="#8a8f9c" />} right={<Toggle checked={showLogo} onChange={(v) => set('showLogo', v)} />}>Posición del logo</SectionHeader>
