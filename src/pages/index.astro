@@ -1,5 +1,6 @@
 ---
 import HojasDePuntos from '../components/HojasDePuntos';
+import Analytics from '@vercel/analytics/astro';
 ---
 
 <html lang="es">
@@ -157,5 +158,6 @@ import HojasDePuntos from '../components/HojasDePuntos';
 	</head>
 	<body>
 		<HojasDePuntos client:load />
+		<Analytics />
 	</body>
 </html>
