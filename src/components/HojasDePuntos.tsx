@@ -1038,6 +1038,12 @@ export default function HojasDePuntos() {
           </div>
         </div>
       </div>
+      <div className="credit-footer" style={{ textAlign: 'center', padding: '0 16px 24px', fontSize: 11, color: '#b0b3bb' }}>
+        Diseñado y creado por{' '}
+        <a href="https://github.com/J3EJosue" target="_blank" rel="noopener noreferrer" style={{ color: '#b0b3bb', textDecoration: 'underline' }}>
+          J3eJosue
+        </a>
+      </div>
     </>
   );
 }
