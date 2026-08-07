@@ -615,16 +615,15 @@ export default function HojasDePuntos() {
                 </>
               )}
 
-              <label style={labelStyle}>Nombre
-                <input type="text" value={name} onChange={(e) => set('name', e.target.value)} style={inputStyle} />
-              </label>
-              <label style={{ ...labelStyle, marginBottom: 4 }}>Carnet / código
-                <input type="text" value={cardId} onChange={(e) => set('cardId', e.target.value)} style={inputStyle} />
-              </label>
-
               <SectionHeader icon={<IconType color="#8a8f9c" />} right={<Toggle checked={showHeader} onChange={(v) => set('showHeader', v)} />}>Encabezado</SectionHeader>
               {showHeader && (
                 <>
+                  <label style={labelStyle}>Nombre
+                    <input type="text" value={name} onChange={(e) => set('name', e.target.value)} style={inputStyle} />
+                  </label>
+                  <label style={labelStyle}>Carnet / código
+                    <input type="text" value={cardId} onChange={(e) => set('cardId', e.target.value)} style={inputStyle} />
+                  </label>
                   <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Tamaño de letra
                     <Stepper value={headerFontSize} min={8} max={16} step={0.5} suffix=" pt" onChange={(v) => set('headerFontSize', v)} />
                   </div>
