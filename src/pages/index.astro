@@ -1,17 +1,37 @@
 ---
-
+import HojasDePuntos from '../components/HojasDePuntos';
 ---
 
-<html lang="en">
+<html lang="es">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
+		<title>Hojas de Puntos Personalizables</title>
+		<style is:global>
+			body {
+				margin: 0;
+				background: oklch(0.94 0.005 250);
+				font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+			}
+			a {
+				color: oklch(0.5 0.12 250);
+			}
+			a:hover {
+				color: oklch(0.4 0.14 250);
+			}
+			@media print {
+				html, body {
+					background: #fff !important;
+				}
+				.settings-panel {
+					display: none !important;
+				}
+			}
+		</style>
 	</head>
 	<body>
-		<h1>Astro</h1>
+		<HojasDePuntos client:only="react" />
 	</body>
 </html>
