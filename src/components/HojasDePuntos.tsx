@@ -264,6 +264,9 @@ const IconPortrait = ({ size = 14, color = 'currentColor' }: IconProps) => (
 const IconLandscape = ({ size = 14, color = 'currentColor' }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" /></svg>
 );
+const IconPlus = ({ size = 12, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+);
 
 function SectionHeader({ icon, right, children }: { icon: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -760,34 +763,40 @@ export default function HojasDePuntos() {
                     </button>
                   )}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <span style={{ fontSize: 11, color: '#8a8f9c' }}>Logo institucional</span>
-                  <button type="button" onClick={() => set('logo', null)} style={{ fontSize: 11, color: '#b03535', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>Quitar logo</button>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {UNIVERSITY_LOGOS.map((u) => {
+                      const selected = logo === u.src;
+                      return (
+                        <button
+                          key={u.key}
+                          type="button"
+                          title={u.label}
+                          aria-label={u.label}
+                          onClick={() => set('logo', u.src)}
+                          style={{
+                            width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', padding: 0, cursor: 'pointer', background: '#fff',
+                            border: selected ? `2px solid ${ACCENT}` : '1px solid #e2e4e9',
+                            boxShadow: selected ? `0 0 0 2px #fff, 0 0 0 4px ${ACCENT}55` : 'none',
+                          }}
+                        >
+                          <img src={u.src ?? DEFAULT_LOGO} alt={u.label} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2, boxSizing: 'border-box' }} />
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      title="Subir logo personalizado"
+                      aria-label="Subir logo personalizado"
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ width: 22, height: 22, borderRadius: '50%', border: '1px dashed #c7cad1', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8a8f9c', padding: 0 }}
+                    >
+                      <IconPlus size={11} />
+                    </button>
+                  </div>
                 </div>
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={setLogoFile} style={{ display: 'none' }} />
-              </div>
-
-              <label style={{ ...labelStyle, marginBottom: 6 }}>Logo de universidad</label>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
-                {UNIVERSITY_LOGOS.map((u) => {
-                  const selected = logo === u.src;
-                  return (
-                    <button
-                      key={u.key}
-                      type="button"
-                      title={u.label}
-                      aria-label={u.label}
-                      onClick={() => set('logo', u.src)}
-                      style={{
-                        width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', padding: 0, cursor: 'pointer', background: '#fff',
-                        border: selected ? `2px solid ${ACCENT}` : '1px solid #e2e4e9',
-                        boxShadow: selected ? `0 0 0 2px #fff, 0 0 0 4px ${ACCENT}55` : 'none',
-                      }}
-                    >
-                      <img src={u.src ?? DEFAULT_LOGO} alt={u.label} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2, boxSizing: 'border-box' }} />
-                    </button>
-                  );
-                })}
               </div>
 
               <SectionHeader icon={<IconImage color="#8a8f9c" />} right={<Toggle checked={showLogo} onChange={(v) => set('showLogo', v)} />}>Posición del logo</SectionHeader>
