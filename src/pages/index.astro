@@ -56,24 +56,12 @@ import HojasDePuntos from '../components/HojasDePuntos';
 				border-color: #2f6fed;
 				box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.15);
 			}
-			/* Hover-only on purpose: :focus-within/:focus-visible were dropped
-			   because clicking the X badge (a real <button>) leaves it focused,
-			   which kept these permanently visible until focus moved elsewhere
-			   — looked "stuck on" instead of reacting to the actual mouse
-			   position. The avatar's onClick still opens the file picker via
-			   click or Enter/Space either way. */
-			.logo-avatar-overlay {
-				opacity: 0;
-				transition: opacity 0.15s ease;
-			}
-			.logo-avatar:hover .logo-avatar-overlay {
-				opacity: 1;
-			}
+			/* Always visible (not hover-gated): the X badge needs to be
+			   reachable on touch devices too, which have no hover state — and
+			   gating it behind hover made it disappear right after a click
+			   left the button focused but the mouse elsewhere. */
+			.logo-avatar-overlay,
 			.logo-remove-badge {
-				opacity: 0;
-				transition: opacity 0.15s ease;
-			}
-			.logo-avatar:hover .logo-remove-badge {
 				opacity: 1;
 			}
 			@keyframes spin {
