@@ -600,6 +600,21 @@ export default function HojasDePuntos() {
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={setLogoFile} style={{ display: 'none' }} />
               </div>
 
+              <SectionHeader icon={<IconImage color="#8a8f9c" />} right={<Toggle checked={showLogo} onChange={(v) => set('showLogo', v)} />}>Posición del logo</SectionHeader>
+              {showLogo && (
+                <>
+                  <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Tamaño
+                    <Stepper value={logoWidthMm} min={10} max={60} step={1} suffix=" mm" onChange={(v) => set('logoWidthMm', v)} />
+                  </div>
+                  <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Posición desde abajo
+                    <Stepper value={logoOffsetBottomMm} min={-20} max={60} step={1} suffix=" mm" onChange={(v) => set('logoOffsetBottomMm', v)} />
+                  </div>
+                  <label style={labelStyle}>Opacidad &mdash; {logoOpacity}
+                    <input type="range" min={0.1} max={1} step={0.05} value={logoOpacity} onChange={(e) => set('logoOpacity', parseFloat(e.target.value))} style={{ width: '100%' }} />
+                  </label>
+                </>
+              )}
+
               <label style={labelStyle}>Nombre
                 <input type="text" value={name} onChange={(e) => set('name', e.target.value)} style={inputStyle} />
               </label>
@@ -608,52 +623,45 @@ export default function HojasDePuntos() {
               </label>
 
               <SectionHeader icon={<IconType color="#8a8f9c" />} right={<Toggle checked={showHeader} onChange={(v) => set('showHeader', v)} />}>Encabezado</SectionHeader>
-              <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Tamaño de letra
-                <Stepper value={headerFontSize} min={8} max={16} step={0.5} suffix=" pt" onChange={(v) => set('headerFontSize', v)} />
-              </div>
-              <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Posición
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button
-                    type="button"
-                    title="Abajo"
-                    aria-label="Abajo"
-                    onClick={() => set('headerPosition', 'bottom')}
-                    style={{
-                      width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer',
-                      border: headerPosition === 'bottom' ? `2px solid ${ACCENT}` : '1px solid #e2e4e9',
-                      boxShadow: headerPosition === 'bottom' ? `0 0 0 3px ${ACCENT}22` : 'none',
-                      background: '#fff', color: headerPosition === 'bottom' ? ACCENT : '#8a8f9c',
-                    }}
-                  >
-                    <IconArrowDown />
-                  </button>
-                  <button
-                    type="button"
-                    title="Arriba"
-                    aria-label="Arriba"
-                    onClick={() => set('headerPosition', 'top')}
-                    style={{
-                      width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer',
-                      border: headerPosition === 'top' ? `2px solid ${ACCENT}` : '1px solid #e2e4e9',
-                      boxShadow: headerPosition === 'top' ? `0 0 0 3px ${ACCENT}22` : 'none',
-                      background: '#fff', color: headerPosition === 'top' ? ACCENT : '#8a8f9c',
-                    }}
-                  >
-                    <IconArrowUp />
-                  </button>
-                </div>
-              </div>
-
-              <SectionHeader icon={<IconImage color="#8a8f9c" />} right={<Toggle checked={showLogo} onChange={(v) => set('showLogo', v)} />}>Posición del logo</SectionHeader>
-              <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Tamaño
-                <Stepper value={logoWidthMm} min={10} max={60} step={1} suffix=" mm" onChange={(v) => set('logoWidthMm', v)} />
-              </div>
-              <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Posición desde abajo
-                <Stepper value={logoOffsetBottomMm} min={-20} max={60} step={1} suffix=" mm" onChange={(v) => set('logoOffsetBottomMm', v)} />
-              </div>
-              <label style={{ ...labelStyle, marginBottom: 0 }}>Opacidad &mdash; {logoOpacity}
-                <input type="range" min={0.1} max={1} step={0.05} value={logoOpacity} onChange={(e) => set('logoOpacity', parseFloat(e.target.value))} style={{ width: '100%' }} />
-              </label>
+              {showHeader && (
+                <>
+                  <div style={{ ...rowLabelStyle, marginBottom: 10 }}>Tamaño de letra
+                    <Stepper value={headerFontSize} min={8} max={16} step={0.5} suffix=" pt" onChange={(v) => set('headerFontSize', v)} />
+                  </div>
+                  <div style={{ ...rowLabelStyle, marginBottom: 0 }}>Posición
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        type="button"
+                        title="Abajo"
+                        aria-label="Abajo"
+                        onClick={() => set('headerPosition', 'bottom')}
+                        style={{
+                          width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer',
+                          border: headerPosition === 'bottom' ? `2px solid ${ACCENT}` : '1px solid #e2e4e9',
+                          boxShadow: headerPosition === 'bottom' ? `0 0 0 3px ${ACCENT}22` : 'none',
+                          background: '#fff', color: headerPosition === 'bottom' ? ACCENT : '#8a8f9c',
+                        }}
+                      >
+                        <IconArrowDown />
+                      </button>
+                      <button
+                        type="button"
+                        title="Arriba"
+                        aria-label="Arriba"
+                        onClick={() => set('headerPosition', 'top')}
+                        style={{
+                          width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer',
+                          border: headerPosition === 'top' ? `2px solid ${ACCENT}` : '1px solid #e2e4e9',
+                          boxShadow: headerPosition === 'top' ? `0 0 0 3px ${ACCENT}22` : 'none',
+                          background: '#fff', color: headerPosition === 'top' ? ACCENT : '#8a8f9c',
+                        }}
+                      >
+                        <IconArrowUp />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div>
